@@ -126,6 +126,13 @@
   <section id="view-id">
     <h2>Identificar una planta</h2>
     <p class="lead">Saca una foto de la hoja, la flor o la planta entera. Cuanto más nítida y cercana, mejor.</p>
+    <div class="chips" id="idOrg">
+      <button class="chip" data-org="auto" aria-pressed="true">Que lo decida</button>
+      <button class="chip" data-org="leaf" aria-pressed="false">Es una hoja</button>
+      <button class="chip" data-org="flower" aria-pressed="false">Es una flor</button>
+      <button class="chip" data-org="fruit" aria-pressed="false">Es un fruto</button>
+      <button class="chip" data-org="bark" aria-pressed="false">Es la corteza</button>
+    </div>
     <div class="row" id="idPick" style="margin-top:0">
       <button class="btn" id="idCam">Abrir cámara</button>
       <button class="btn ghost" id="idGal">Elegir de la galería</button>
@@ -146,6 +153,9 @@
   <section id="view-garden" class="hide">
     <h2>Mi jardín</h2>
     <p class="lead" id="gardenCount"></p>
+    <div class="row" style="margin-top:0"><button class="btn ghost" id="addManBtn">Añadir planta a mano</button></div>
+    <input type="file" accept="image/*" id="manFile" class="hide">
+    <div id="addManBox" class="hide"></div>
     <div id="gardenDue"></div>
     <div id="gardenList"></div>
   </section>
@@ -159,20 +169,42 @@
   <!-- DIAGNÓSTICO -->
   <section id="view-diag" class="hide">
     <h2>¿Qué le pasa?</h2>
-    <p class="lead">Fotografía la parte afectada: la hoja manchada, el tallo, la tierra. Si la planta está en tu jardín, elígela para afinar el diagnóstico.</p>
+    <p class="lead">Marca lo que estás viendo. La app cruza las señales con su guía de problemas, sin necesidad de internet.</p>
+
+    <div class="sec-title">Qué planta es</div>
     <div class="chips" id="diagChips"></div>
+
+    <div class="sec-title">Dónde está y cuándo la regaste</div>
+    <div id="dgCtxBox">
+      <div class="chips">
+        <button class="chip" data-k="donde" data-v="interior" aria-pressed="false">Dentro de casa</button>
+        <button class="chip" data-k="donde" data-v="exterior" aria-pressed="false">Fuera</button>
+      </div>
+      <div class="chips">
+        <button class="chip" data-k="riego" data-v="reciente" aria-pressed="false">Regada hace poco</button>
+        <button class="chip" data-k="riego" data-v="hace-mucho" aria-pressed="false">Hace tiempo que no</button>
+      </div>
+    </div>
+
+    <div id="dgSint"></div>
+    <p class="note" id="dgCount"></p>
+
+    <div class="sec-title">Foto (opcional)</div>
+    <p class="note" style="margin-top:2px">No se analiza: se guarda junto al diagnóstico en la ficha de la planta.</p>
     <div class="row" id="dgPick" style="margin-top:0">
-      <button class="btn" id="dgCam">Abrir cámara</button>
+      <button class="btn ghost" id="dgCam">Abrir cámara</button>
       <button class="btn ghost" id="dgGal">Elegir de la galería</button>
     </div>
     <input type="file" accept="image/*" id="dgFile" class="hide">
     <input type="file" accept="image/*" capture="environment" id="dgFileCam" class="hide">
     <div id="dgStage" class="hide">
       <img class="preview" id="dgPrev" alt="Foto del problema">
-      <div class="row">
-        <button class="btn" id="dgGo">Analizar problema</button>
-        <button class="btn quiet" id="dgReset">Otra foto</button>
-      </div>
+      <div class="row"><button class="btn quiet" id="dgReset">Quitar la foto</button></div>
+    </div>
+
+    <div class="row">
+      <button class="btn" id="dgGo">Ver qué puede ser</button>
+      <button class="btn quiet" id="dgClear">Empezar de nuevo</button>
     </div>
     <div id="dgOut"></div>
   </section>
@@ -180,12 +212,31 @@
   <!-- AJUSTES -->
   <section id="view-set" class="hide">
     <h2>Ajustes</h2>
-    <p class="lead">Clave de acceso y copia de seguridad del jardín.</p>
+    <p class="lead">Sincronización, clave de identificación y copia de seguridad del jardín.</p>
+
+    <div class="sec-title">Sincronizar entre aparatos</div>
+    <div class="card pad">
+      <p class="note" id="syncState" style="margin:0 0 10px">Comprobando…</p>
+      <div id="syncForm">
+        <label class="fld" for="syncMail">Correo</label>
+        <input class="text" id="syncMail" type="email" autocomplete="username" placeholder="el tuyo de Firebase">
+        <label class="fld" for="syncPass" style="display:block;margin-top:10px">Contraseña</label>
+        <input class="text" id="syncPass" type="password" autocomplete="current-password">
+        <div class="row"><button class="btn" id="syncIn">Entrar</button></div>
+        <p class="note">Con la sesión iniciada, el jardín se guarda también en tu base de Firebase y aparece igual en el móvil y en el ordenador.</p>
+      </div>
+      <div id="syncOut" class="hide">
+        <div class="row"><button class="btn ghost" id="syncNow">Sincronizar ahora</button>
+        <button class="btn quiet" id="syncLogout">Cerrar sesión</button></div>
+      </div>
+    </div>
+
+    <div class="sec-title">Identificación por foto</div>
 
     <div class="card pad">
-      <label class="fld" for="apiKey">Clave de API de Anthropic</label>
-      <input class="text" id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off">
-      <p class="note">Necesaria para identificar y diagnosticar cuando la app corre fuera de Claude, como en el APK. Se guarda solo en este teléfono.</p>
+      <label class="fld" for="apiKey">Clave de Pl@ntNet</label>
+      <input class="text" id="apiKey" type="password" placeholder="2b10..." autocomplete="off">
+      <p class="note">Se saca gratis en my.plantnet.org: 500 identificaciones al día y sin fecha de caducidad. Solo hace falta para identificar por foto: el jardín y el diagnóstico funcionan sin clave y sin internet. Se guarda únicamente en este teléfono.</p>
       <div class="row"><button class="btn" id="keySave">Guardar clave</button>
       <button class="btn ghost" id="keyTest">Probar la clave</button>
       <button class="btn quiet" id="keyClear">Borrar clave</button></div>
@@ -237,6 +288,9 @@
   </button>
 </nav>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 /* ============ almacenamiento (Claude, localStorage o memoria) ============ */
 const MEM = {};
@@ -272,7 +326,12 @@ const db = {
   }
 };
 const store = {
-  async save(p){ await db.set('planta:'+p.id, JSON.stringify(p)); },
+  async save(p){
+    p.mod = Date.now();
+    const limpio = JSON.parse(JSON.stringify(p));
+    await db.set('planta:'+p.id, JSON.stringify(limpio));
+    if(FB.on){ try{ await FB.db.ref('plantas/'+FB.uid+'/'+p.id).set(limpio); }catch(e){} }
+  },
   async all(){
     const out=[];
     for(const k of await db.keys('planta:')){
@@ -280,12 +339,156 @@ const store = {
     }
     return out.sort((a,b)=>(b.creada||0)-(a.creada||0));
   },
-  async remove(id){ await db.del('planta:'+id); }
+  async remove(id){
+    await db.del('planta:'+id);
+    if(FB.on){
+      try{
+        await FB.db.ref('plantas/'+FB.uid+'/'+id).remove();
+        await FB.db.ref('borradas/'+FB.uid+'/'+id).set(Date.now());
+      }catch(e){}
+    }
+  }
 };
 
 /* ============ configuración ============ */
 const CFG = { apiKey:'' };
-async function cfgLoad(){ CFG.apiKey = (await db.get('config:apikey')) || ''; }
+async function cfgLoad(){ CFG.apiKey = (await db.get('config:pnkey')) || ''; }
+
+/* ============ sincronización con Firebase ============ */
+const FBCFG = {
+  apiKey: "AIzaSyDJjwKe9ZO0a3_g3iTAhfko6mi1Habjz_Y",
+  authDomain: "herbario-2ce4d.firebaseapp.com",
+  databaseURL: "https://herbario-2ce4d-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "herbario-2ce4d",
+  storageBucket: "herbario-2ce4d.firebasestorage.app",
+  messagingSenderId: "554006726892",
+  appId: "1:554006726892:web:0e865c88b4d9ef6b9f7dc9"
+};
+const FB = { ok:false, on:false, uid:null, correo:'', db:null, auth:null, estado:'Sin conectar' };
+
+function fbEstado(t){ FB.estado=t; if($('syncState')) $('syncState').textContent=t; }
+
+function fbInit(){
+  if(!window.firebase || !firebase.initializeApp) return false;
+  try{
+    firebase.initializeApp(FBCFG);
+    FB.auth = firebase.auth();
+    FB.db = firebase.database();
+    FB.ok = true;
+    return true;
+  }catch(e){ return false; }
+}
+
+async function localAll(){
+  const out=[];
+  for(const k of await db.keys('planta:')){
+    try{ const v=await db.get(k); if(v) out.push(JSON.parse(v)); }catch(e){}
+  }
+  return out;
+}
+async function localClear(){
+  for(const k of await db.keys('planta:')) await db.del(k);
+}
+
+async function fbSync(){
+  if(!FB.on) return;
+  fbEstado('Sincronizando…');
+  try{
+    const ref = FB.db.ref('plantas/'+FB.uid);
+    const tref = FB.db.ref('borradas/'+FB.uid);
+    const remote = (await ref.get()).val() || {};
+    const tomb   = (await tref.get()).val() || {};
+
+    const map = {};
+    (await localAll()).forEach(p=>{ if(p&&p.id) map[p.id]=p; });
+    Object.keys(remote).forEach(id=>{
+      const r=remote[id], l=map[id];
+      if(r && (!l || (r.mod||0) > (l.mod||0))) map[id]=r;
+    });
+    Object.keys(tomb).forEach(id=>{
+      const p=map[id];
+      if(p && (p.mod||0) <= (tomb[id]||0)) delete map[id];
+    });
+
+    await localClear();
+    for(const id in map) await db.set('planta:'+id, JSON.stringify(map[id]));
+
+    const subir={};
+    for(const id in map){
+      const r=remote[id];
+      if(!r || (map[id].mod||0) > (r.mod||0)) subir[id]=map[id];
+    }
+    if(Object.keys(subir).length) await ref.update(subir);
+    for(const id in tomb){ if(remote[id] && !map[id]) await ref.child(id).remove(); }
+
+    // la clave de Pl@ntNet viaja con la cuenta, para no teclearla en cada aparato
+    const cref = FB.db.ref('config/'+FB.uid+'/pnkey');
+    const rk = (await cref.get()).val() || '';
+    if(CFG.apiKey && !rk) await cref.set(CFG.apiKey);
+    else if(rk && !CFG.apiKey){ CFG.apiKey=rk; await db.set('config:pnkey',rk); }
+
+    fbEstado('Al día · '+Object.keys(map).length+' planta(s) · '+FB.correo);
+    try{ if(!$('view-garden').classList.contains('hide')) renderGarden(); }catch(e){}
+  }catch(e){
+    fbEstado('No se pudo sincronizar: '+(e && e.message ? e.message : 'error'));
+  }
+}
+
+function fbListen(){
+  if(!FB.on) return;
+  FB.db.ref('plantas/'+FB.uid).on('value', async snap=>{
+    const remote = snap.val() || {};
+    let cambios=0;
+    for(const id in remote){
+      const r=remote[id];
+      let l=null;
+      try{ const v=await db.get('planta:'+id); l=v?JSON.parse(v):null; }catch(e){}
+      if(!l || (r.mod||0) > (l.mod||0)){ await db.set('planta:'+id, JSON.stringify(r)); cambios++; }
+    }
+    try{ if(cambios && !$('view-garden').classList.contains('hide')) renderGarden(); }catch(e){}
+  });
+}
+
+async function fbEntrar(correo, clave){
+  if(!FB.ok && !fbInit()){ fbEstado('No se cargó Firebase. Comprueba la conexión y recarga la página.'); return; }
+  fbEstado('Entrando…');
+  try{
+    await FB.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    await FB.auth.signInWithEmailAndPassword(correo, clave);
+  }catch(e){
+    const c=(e&&e.code)||'';
+    fbEstado(
+      c.indexOf('wrong-password')>=0 || c.indexOf('invalid-credential')>=0 ? 'Correo o contraseña incorrectos.' :
+      c.indexOf('user-not-found')>=0 ? 'Ese correo no está dado de alta en el proyecto.' :
+      c.indexOf('network')>=0 ? 'Sin conexión con Firebase.' :
+      c.indexOf('too-many')>=0 ? 'Demasiados intentos. Espera unos minutos.' :
+      'No se pudo entrar ('+(c||'error')+').');
+  }
+}
+async function fbSalir(){
+  try{ if(FB.on) FB.db.ref('plantas/'+FB.uid).off(); }catch(e){}
+  try{ await FB.auth.signOut(); }catch(e){}
+}
+
+function fbBoot(){
+  if(!fbInit()){ fbEstado('Firebase no disponible: la app guarda solo en este aparato.'); return; }
+  FB.auth.onAuthStateChanged(async u=>{
+    if(u){
+      FB.on=true; FB.uid=u.uid; FB.correo=u.email||'';
+      if($('syncForm')) $('syncForm').classList.add('hide');
+      if($('syncOut')) $('syncOut').classList.remove('hide');
+      await fbSync();
+      fbListen();
+    }else{
+      FB.on=false; FB.uid=null; FB.correo='';
+      if($('syncForm')) $('syncForm').classList.remove('hide');
+      if($('syncOut')) $('syncOut').classList.add('hide');
+      fbEstado('Sin conectar. El jardín se guarda solo en este aparato.');
+    }
+    renderSettings();
+  });
+}
+
 
 /* ============ imagen ============ */
 async function loadBitmap(file){
@@ -316,65 +519,508 @@ async function processImage(file){
   return { full, thumb, b64: full.split(',')[1] };
 }
 
-/* ============ modelo ============ */
-async function askClaude(b64, prompt){
-  const headers = {"Content-Type":"application/json"};
-  if(CFG.apiKey){
-    headers["x-api-key"]=CFG.apiKey;
-    headers["anthropic-version"]="2023-06-01";
-    headers["anthropic-dangerous-direct-browser-access"]="true";
-  }
+/* ============ identificación: Pl@ntNet ============ */
+const PN = 'https://my-api.plantnet.org/v2';
+
+async function plantnetId(dataUrl, organo){
+  if(!CFG.apiKey) throw new Error('Falta la clave de Pl@ntNet. Ve a Ajustes, pégala y vuelve aquí.');
+  let blob;
+  try{ blob = await (await fetch(dataUrl)).blob(); }
+  catch(e){ throw new Error('No se pudo preparar la foto. Prueba con otra.'); }
+  const fd = new FormData();
+  fd.append('images', blob, 'planta.jpg');
+  if(organo && organo!=='auto') fd.append('organs', organo);
+  const url = PN+'/identify/all?api-key='+encodeURIComponent(CFG.apiKey)+
+              '&lang=es&nb-results=6&include-related-images=false&no-reject=false';
   let r;
-  try{
-    r = await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST", headers,
-      body:JSON.stringify({
-        model:"claude-sonnet-4-6", max_tokens:1000,
-        messages:[{role:"user",content:[
-          {type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},
-          {type:"text",text:prompt}
-        ]}]
-      })
-    });
-  }catch(e){
-    throw new Error(CFG.apiKey
-      ? 'Sin conexión con el servidor. Revisa internet e inténtalo otra vez.'
-      : 'No hay conexión con el modelo. Si estás en el APK, ve a Ajustes y guarda tu clave de API.');
-  }
-  if(r.status===401 || r.status===403) throw new Error('La clave de API falta o no es válida. Revísala en Ajustes.');
-  if(r.status===429) throw new Error('Demasiadas consultas seguidas. Espera un momento y reintenta.');
-  if(!r.ok) throw new Error('La consulta falló (error '+r.status+'). Reintenta en unos segundos.');
+  try{ r = await fetch(url,{method:'POST',body:fd}); }
+  catch(e){ throw new Error('Sin conexión con Pl@ntNet. La identificación necesita internet; el jardín y el diagnóstico funcionan sin él.'); }
+  if(r.status===401 || r.status===403) throw new Error('La clave de Pl@ntNet no es válida o no tiene permiso para este dominio. Revísala en Ajustes.');
+  if(r.status===404) throw new Error('Pl@ntNet no reconoce ninguna especie en esa foto. Prueba acercándote a una hoja o a una flor.');
+  if(r.status===413) throw new Error('La foto pesa demasiado. Saca otra desde la propia app.');
+  if(r.status===429) throw new Error('Se agotaron las identificaciones de hoy (500 diarias). Mañana a las 2 de la mañana se reinicia.');
+  if(!r.ok) throw new Error('Pl@ntNet devolvió un error '+r.status+'. Reintenta en unos segundos.');
   const data = await r.json();
-  const txt = (data.content||[]).map(c=>c.type==='text'?c.text:'').join('\n');
-  return parseJSON(txt);
-}
-function parseJSON(txt){
-  let t=String(txt||'').replace(/```json/gi,'').replace(/```/g,'').trim();
-  const a=t.indexOf('{'), b=t.lastIndexOf('}');
-  if(a>=0&&b>a) t=t.slice(a,b+1);
-  try{ return JSON.parse(t); }
-  catch(e){ throw new Error('La respuesta llegó incompleta. Prueba otra vez con una foto más nítida.'); }
+  const out = (data.results||[]).map(x=>{
+    const s=x.species||{};
+    return {
+      sci: s.scientificNameWithoutAuthor||'',
+      common: (s.commonNames||[])[0]||'',
+      otros: (s.commonNames||[]).slice(1,3),
+      genus: ((s.genus||{}).scientificNameWithoutAuthor)||'',
+      family: ((s.family||{}).scientificNameWithoutAuthor)||'',
+      score: x.score||0
+    };
+  }).filter(x=>x.sci);
+  if(!out.length) throw new Error('Pl@ntNet no encontró ninguna especie parecida. Prueba con otra foto, más cerca y con buena luz.');
+  return out;
 }
 
-const PROMPT_ID = `Eres botánico y jardinero. Identifica la planta de la foto.
-Responde SOLO con este JSON, sin texto adicional, en español, con frases breves:
-{"esPlanta":true,"confianza":"alta|media|baja","nombreComun":"","nombreCientifico":"","familia":"","origen":"región de origen","descripcion":"2 frases","rasgos":["3 rasgos visibles que confirman la identificación"],
-"escalas":{"luz":1,"riego":1,"humedad":1},
-"cuidados":{"luz":"","riego":"","suelo":"","temperatura":"","abono":"","poda":""},
-"diasRiego":7,"porte":"altura y ancho adultos","floracion":"época y aspecto","toxicidad":"para personas y mascotas","dificultad":"fácil|media|alta","consejo":"un consejo práctico"}
-Las escalas van de 1 a 3: luz 1=sombra 2=media sombra 3=sol pleno; riego 1=escaso 2=moderado 3=abundante; humedad ambiental 1=baja 2=media 3=alta.
-"diasRiego" es cada cuántos días conviene regar en temporada de crecimiento, como número entero.
-Si la foto no muestra una planta, responde {"esPlanta":false,"motivo":"qué ves"}.`;
-
-function promptDiag(ctx){
-  return `Eres fitopatólogo y jardinero. Analiza el problema de la planta en la foto.${ctx}
-Responde SOLO con este JSON, sin texto adicional, en español, con frases breves:
-{"esPlanta":true,"problema":"nombre del problema","gravedad":"leve|moderada|grave","confianza":"alta|media|baja",
-"sintomas":["lo que se observa en la foto"],"causas":["causas probables, la más probable primero"],
-"tratamiento":["pasos concretos y ordenados, incluye remedios caseros y productos comerciales"],
-"prevencion":["cómo evitar que vuelva"],"plazo":"cuándo debería notarse mejoría","contagio":"riesgo para otras plantas y qué hacer"}
-Si la foto no muestra una planta, responde {"esPlanta":false,"motivo":"qué ves"}.`;
+async function plantnetQuota(){
+  const r = await fetch(PN+'/quota/daily?api-key='+encodeURIComponent(CFG.apiKey));
+  if(!r.ok) return {ok:false, status:r.status};
+  const d = await r.json();
+  const hoy = Array.isArray(d) ? d[d.length-1] : d;
+  return {ok:true, data:hoy};
 }
+
+/* ============ cuidados: base local ============ */
+/* [tipo, luz 1-3, riego 1-3, humedad 1-3, días entre riegos, nota opcional] */
+const TIPOS = {
+  suculenta:{suelo:'Sustrato de cactus o tierra con mucha arena. Maceta con agujero, siempre.',temp:'Bien de 10 a 30 °C. El frío con humedad la pudre.',abono:'Abono de cactus muy diluido, una vez al mes de abril a septiembre.',poda:'Quita las hojas secas de abajo. De cada hoja sana sale una planta nueva.',consejo:'Antes de regar mete el dedo en la tierra: si no está seca del todo, espera unos días más.'},
+  cactus:{suelo:'Sustrato mineral, muy drenante, con grava por encima.',temp:'Aguanta calor de sobra; en invierno, seco y por encima de 5 °C.',abono:'Abono de cactus en primavera y verano, poco.',poda:'No necesita. Retira los restos secos de la base.',consejo:'De noviembre a febrero no lo riegues nada: el reposo seco es lo que lo hace florecer.'},
+  tropical:{suelo:'Sustrato universal con un puñado de perlita para que aligere.',temp:'De 18 a 26 °C. Por debajo de 12 °C sufre; lejos de corrientes.',abono:'Abono líquido para verdes cada 15 días de marzo a septiembre.',poda:'Corta hojas estropeadas por la base. Despunta si se alarga.',consejo:'Pásale un paño húmedo a las hojas de vez en cuando: respiran mejor y ahuyenta a la araña roja.'},
+  helecho:{suelo:'Sustrato ligero con turba o fibra de coco, que retenga humedad sin encharcar.',temp:'De 15 a 24 °C. Odia el aire seco de la calefacción.',abono:'Abono líquido muy diluido cada tres semanas en primavera y verano.',poda:'Corta las frondes secas al ras. Rebrota del centro.',consejo:'Ponlo sobre un plato con bolas de arcilla y agua, sin que la maceta toque el agua.'},
+  orquidea:{suelo:'Corteza de pino para orquídeas, nunca tierra normal. Maceta transparente.',temp:'De 16 a 27 °C, con unos grados menos por la noche.',abono:'Abono de orquídeas muy diluido cada 2 o 3 riegos en crecimiento.',poda:'Cuando se seque la vara, córtala dos yemas por encima de la base.',consejo:'Riega por inmersión 10 minutos y deja escurrir del todo. Raíces verdes: llena. Plateadas: sed.'},
+  aromatica:{suelo:'Tierra pobre y suelta, con arena. Nada de sustratos muy ricos.',temp:'Rústica. Las mediterráneas aguantan bien el frío seco.',abono:'Muy poco: el exceso les quita aroma.',poda:'Despunta a menudo para que no se haga leñosa y florezca menos.',consejo:'Cógele hojas con frecuencia: es la mejor poda que existe.'},
+  hortaliza:{suelo:'Sustrato rico en materia orgánica, mullido y profundo.',temp:'Cada especie tiene su temporada; teme las heladas tardías.',abono:'Compost al plantar y abono líquido cada 15 días en producción.',poda:'Quita hojas bajas amarillentas y chupones para airear.',consejo:'Riega al pie y por la mañana: mojar las hojas de noche es lo que trae los hongos.'},
+  frutal:{suelo:'Suelo profundo y bien drenado; hoyo amplio al plantar.',temp:'Depende de la variedad; casi todos necesitan horas de frío invernal.',abono:'Materia orgánica al final del invierno y abono de fondo en primavera.',poda:'Poda de invierno para dar forma y aclarar el centro del árbol.',consejo:'Mejor un riego largo y espaciado que uno corto a diario: las raíces bajan a buscar agua.'},
+  arbusto:{suelo:'Tierra de jardín mejorada con compost. Buen drenaje.',temp:'Rústico una vez arraigado; los primeros dos años, protégelo.',abono:'Compost en superficie en otoño y abono en primavera.',poda:'Poda tras la floración; quita ramas secas y cruzadas.',consejo:'Acolcha el pie con corteza o restos de siega: retiene humedad y frena las hierbas.'},
+  flor:{suelo:'Sustrato de calidad con buen drenaje en maceta o jardinera.',temp:'De temporada; la mayoría no pasa del primer frío fuerte.',abono:'Abono de floración cada 10 o 15 días mientras florezca.',poda:'Quita las flores marchitas cada pocos días.',consejo:'Retirar lo marchito engaña a la planta y la obliga a seguir floreciendo.'},
+  trepadora:{suelo:'Tierra profunda y fresca al pie, con la base sombreada.',temp:'Rústica en general; protege el pie los primeros inviernos.',abono:'Compost en otoño y abono en primavera.',poda:'Guía los tallos jóvenes y aclara en invierno lo enmarañado.',consejo:'Dale el soporte antes de que lo necesite: enderezar una trepadora hecha es imposible.'},
+  bulbosa:{suelo:'Tierra suelta y muy drenante; el bulbo encharcado se pudre.',temp:'Muchas necesitan frío invernal para brotar.',abono:'Abono rico en potasio al brotar y tras la floración.',poda:'No cortes las hojas hasta que amarilleen: alimentan el bulbo del año que viene.',consejo:'Marca dónde están: cuando desaparecen bajo tierra, se cavan sin querer.'},
+  arbol:{suelo:'Suelo profundo. Planta sin enterrar el cuello y riega abundante el primer verano.',temp:'Rústico; los dos primeros años son los delicados.',abono:'Compost en superficie al final del invierno.',poda:'Lo mínimo. Retira ramas secas, rotas o mal dirigidas en reposo.',consejo:'Piensa en el tamaño adulto antes de plantar, no en el de ahora.'},
+  conifera:{suelo:'Suelo drenado; no soportan el encharcamiento.',temp:'Muy rústicas. Sufren más por sequía que por frío.',abono:'Poco; abono específico para coníferas en primavera.',poda:'No cortes por la madera vieja sin hojas: de ahí no rebrotan.',consejo:'Si se pone parda por dentro y por abajo, suele ser normal: la hoja vieja se renueva.'},
+  acidofila:{suelo:'Tierra de brezo o sustrato para acidófilas. Odian la cal.',temp:'Prefieren fresco y ambiente húmedo, a media sombra.',abono:'Abono para plantas de hoja ácida en primavera.',poda:'Justo después de florecer, sin tocar los brotes del año siguiente.',consejo:'Riégala con agua de lluvia si puedes; el agua dura del grifo le amarillea las hojas.'},
+  palmera:{suelo:'Sustrato drenante con arena. Trasplanta poco: no le gusta.',temp:'De 15 a 28 °C; las de interior temen el frío y las corrientes.',abono:'Abono para palmeras cada mes en primavera y verano.',poda:'Corta solo las hojas secas del todo, dejando un trozo de peciolo.',consejo:'Las puntas secas suelen ser aire seco o exceso de cal, no falta de agua.'},
+  vivaz:{suelo:'Tierra de jardín mullida con algo de compost.',temp:'Rústica; rebrota de la cepa cada primavera.',abono:'Compost en superficie al final del invierno.',poda:'Corta lo seco en otoño o a final de invierno.',consejo:'Cada tres o cuatro años divide la mata: rejuvenece y te sale planta gratis.'}
+};
+
+const CARE = {
+  Echeveria:['suculenta',3,1,1,14], Sedum:['suculenta',3,1,1,14], Sempervivum:['suculenta',3,1,1,16],
+  Crassula:['suculenta',3,1,1,14], Aloe:['suculenta',3,1,1,14], Agave:['suculenta',3,1,1,18],
+  Kalanchoe:['suculenta',3,1,1,12], Haworthia:['suculenta',2,1,1,14], Aeonium:['suculenta',3,1,1,12],
+  Portulacaria:['suculenta',3,1,1,12], Graptopetalum:['suculenta',3,1,1,14], Lithops:['suculenta',3,1,1,25],
+  Opuntia:['cactus',3,1,1,20], Mammillaria:['cactus',3,1,1,20], Echinopsis:['cactus',3,1,1,20],
+  Cereus:['cactus',3,1,1,20], Schlumbergera:['tropical',2,2,2,8,'Es un cactus de selva: quiere más agua y menos sol que los del desierto.'],
+  Euphorbia:['suculenta',3,1,1,14,'El látex blanco irrita la piel y los ojos: usa guantes al podarla.'],
+  Monstera:['tropical',2,2,3,7], Philodendron:['tropical',2,2,3,7], Epipremnum:['tropical',2,2,2,8],
+  Ficus:['tropical',2,2,2,8,'Odia los cambios de sitio: elige un rincón y déjala ahí.'],
+  Dracaena:['tropical',2,2,2,10], Sansevieria:['tropical',2,1,1,18], Spathiphyllum:['tropical',1,3,3,5,'Cuando tiene sed baja las hojas de golpe; riega y se recupera en horas.'],
+  Anthurium:['tropical',2,2,3,6], Calathea:['tropical',1,2,3,5], Maranta:['tropical',1,2,3,5],
+  Goeppertia:['tropical',1,2,3,5], Chlorophytum:['tropical',2,2,2,7], Zamioculcas:['tropical',1,1,1,18],
+  Aglaonema:['tropical',1,2,2,8], Dieffenbachia:['tropical',2,2,2,7], Schefflera:['tropical',2,2,2,8],
+  Syngonium:['tropical',2,2,3,7], Tradescantia:['tropical',2,2,2,6], Peperomia:['tropical',2,1,2,10],
+  Hoya:['tropical',2,1,2,12], Begonia:['tropical',2,2,3,6], Streptocarpus:['tropical',2,2,2,7],
+  Alocasia:['tropical',2,2,3,6], Yucca:['suculenta',3,1,1,16], Strelitzia:['tropical',3,2,2,8],
+  Musa:['tropical',3,3,3,4], Cyclamen:['flor',2,2,2,6,'Riega por el plato, nunca sobre el cormo, o se pudre.'],
+  Clivia:['tropical',1,1,2,12], Aspidistra:['tropical',1,1,2,14], Chamaedorea:['palmera',1,2,3,8],
+  Howea:['palmera',1,2,2,10], Phoenix:['palmera',3,2,2,10], Trachycarpus:['palmera',3,2,2,12],
+  Washingtonia:['palmera',3,2,1,12], Dypsis:['palmera',2,2,3,8],
+  Nephrolepis:['helecho',1,3,3,4], Adiantum:['helecho',1,3,3,3], Asplenium:['helecho',1,3,3,5],
+  Pteris:['helecho',1,3,3,4], Dryopteris:['helecho',1,2,3,6], Polystichum:['helecho',1,2,3,6],
+  Phalaenopsis:['orquidea',2,2,3,7], Cymbidium:['orquidea',2,2,2,7], Dendrobium:['orquidea',2,2,2,7],
+  Cattleya:['orquidea',2,2,2,8],
+  Ocimum:['aromatica',3,3,2,2,'En cuanto le salga la espiga de flor, córtala: si florece, se acaba la hoja.'],
+  Mentha:['aromatica',2,3,2,3,'Plántala siempre en maceta aparte o se come el bancal entero.'],
+  Rosmarinus:['aromatica',3,1,1,10], Salvia:['aromatica',3,1,1,9], Thymus:['aromatica',3,1,1,10],
+  Lavandula:['aromatica',3,1,1,10,'Tras la floración recórtala en bola, sin llegar a la madera vieja.'],
+  Origanum:['aromatica',3,1,1,8], Melissa:['aromatica',2,2,2,4], Petroselinum:['aromatica',2,2,2,3],
+  Coriandrum:['aromatica',2,2,2,3], Laurus:['arbusto',3,2,2,10], Aloysia:['aromatica',3,2,2,6],
+  Helichrysum:['aromatica',3,1,1,10],
+  Solanum:['hortaliza',3,3,2,2,'No mojes las hojas al regar: es la puerta de entrada del mildiu.'],
+  Capsicum:['hortaliza',3,3,2,2], Cucurbita:['hortaliza',3,3,2,2], Cucumis:['hortaliza',3,3,2,2],
+  Lactuca:['hortaliza',2,3,2,2], Allium:['hortaliza',3,2,1,4], Fragaria:['hortaliza',3,2,2,3],
+  Phaseolus:['hortaliza',3,2,2,3], Brassica:['hortaliza',3,3,2,3], Daucus:['hortaliza',3,2,2,3],
+  Beta:['hortaliza',3,2,2,3], Pisum:['hortaliza',3,2,2,3], Spinacia:['hortaliza',2,3,2,2],
+  Malus:['frutal',3,2,2,10], Pyrus:['frutal',3,2,2,10], Prunus:['frutal',3,2,2,10],
+  Citrus:['frutal',3,2,2,6,'Las hojas amarillas con los nervios verdes son falta de hierro: quelato y agua blanda.'],
+  Olea:['frutal',3,1,1,14], Vitis:['frutal',3,1,1,12], Actinidia:['frutal',3,3,2,5],
+  Castanea:['arbol',3,2,2,12], Juglans:['arbol',3,2,2,12], Corylus:['arbusto',2,2,2,8],
+  Rubus:['frutal',3,2,2,5], Ribes:['frutal',2,2,2,5], Vaccinium:['acidofila',2,3,3,4],
+  Hydrangea:['acidofila',1,3,3,3,'El azul o el rosa dependen de la acidez del suelo, no de la variedad.'],
+  Camellia:['acidofila',1,2,3,6], Rhododendron:['acidofila',1,2,3,5], Erica:['acidofila',3,2,2,6],
+  Gardenia:['acidofila',2,3,3,4], Magnolia:['arbol',3,2,2,10],
+  Rosa:['arbusto',3,2,2,4,'Riega al pie y por la mañana: la hoja mojada de noche es oídio seguro.'],
+  Buxus:['arbusto',2,2,2,8], Viburnum:['arbusto',2,2,2,7], Lonicera:['trepadora',2,2,2,6],
+  Jasminum:['trepadora',3,2,2,5], Bougainvillea:['trepadora',3,1,1,8,'Florece más si la tienes algo seca y apretada en la maceta.'],
+  Nerium:['arbusto',3,1,1,8,'Toda la planta es tóxica: lávate las manos después de podarla.'],
+  Hibiscus:['arbusto',3,3,2,4], Fuchsia:['flor',1,3,3,3], Pelargonium:['flor',3,2,1,5],
+  Geranium:['vivaz',2,2,2,6], Petunia:['flor',3,3,2,2], Dahlia:['bulbosa',3,3,2,3],
+  Chrysanthemum:['flor',3,2,2,4], Tagetes:['flor',3,2,2,3], Viola:['flor',2,2,2,3],
+  Impatiens:['flor',1,3,3,3], Lantana:['arbusto',3,2,1,5], Abelia:['arbusto',3,2,2,7],
+  Weigela:['arbusto',3,2,2,7], Forsythia:['arbusto',3,2,2,8], Syringa:['arbusto',3,2,2,8],
+  Spiraea:['arbusto',3,2,2,7], Escallonia:['arbusto',3,2,2,8], Photinia:['arbusto',3,2,2,8],
+  Pittosporum:['arbusto',3,2,2,8], Hebe:['arbusto',3,2,2,7], Nandina:['arbusto',2,2,2,8],
+  Aucuba:['arbusto',1,2,2,8], Ilex:['arbusto',2,2,2,9],
+  Hedera:['trepadora',1,2,2,8], Parthenocissus:['trepadora',2,2,2,8], Wisteria:['trepadora',3,2,2,7],
+  Clematis:['trepadora',3,3,2,4,'Cabeza al sol y pies a la sombra: acolcha bien la base.'],
+  Passiflora:['trepadora',3,2,2,5], Trachelospermum:['trepadora',3,2,2,7],
+  Tulipa:['bulbosa',3,2,1,7], Narcissus:['bulbosa',3,2,1,7], Hyacinthus:['bulbosa',3,2,1,7],
+  Lilium:['bulbosa',2,2,2,5], Gladiolus:['bulbosa',3,2,2,5], Crocus:['bulbosa',3,2,1,8],
+  Hippeastrum:['bulbosa',2,2,2,7], Zantedeschia:['bulbosa',2,3,3,4], Iris:['vivaz',3,2,2,7],
+  Agapanthus:['vivaz',3,2,2,6], Hemerocallis:['vivaz',3,2,2,5], Alstroemeria:['vivaz',2,2,2,5],
+  Hosta:['vivaz',1,3,3,4], Heuchera:['vivaz',2,2,2,5], Helleborus:['vivaz',1,2,2,7],
+  Aster:['vivaz',3,2,2,5], Rudbeckia:['vivaz',3,2,2,5], Echinacea:['vivaz',3,1,1,7],
+  Papaver:['vivaz',3,1,1,8], Lavatera:['arbusto',3,2,2,6],
+  Quercus:['arbol',3,2,2,14], Acer:['arbol',2,2,2,8], Betula:['arbol',3,2,2,8],
+  Fagus:['arbol',2,2,2,10], Platanus:['arbol',3,2,2,12], Salix:['arbol',3,3,3,5],
+  Populus:['arbol',3,3,2,6], Tilia:['arbol',3,2,2,10], Fraxinus:['arbol',3,2,2,10],
+  Eucalyptus:['arbol',3,1,1,12], Pinus:['conifera',3,1,1,14], Cupressus:['conifera',3,1,1,14],
+  Thuja:['conifera',3,2,2,10], Taxus:['conifera',2,2,2,10], Cedrus:['conifera',3,1,1,14],
+  Chamaecyparis:['conifera',3,2,2,10], Juniperus:['conifera',3,1,1,14],
+  Phyllostachys:['vivaz',3,3,2,4], Cyperus:['tropical',2,3,3,2], Equisetum:['vivaz',2,3,3,3],
+  Taraxacum:['vivaz',3,2,2,7], Plantago:['vivaz',3,2,2,7], Trifolium:['vivaz',3,2,2,6],
+  Urtica:['vivaz',2,2,2,6], Rumex:['vivaz',3,2,2,7], Calluna:['acidofila',3,2,2,6]
+};
+
+const CARE_FAM = {
+  Cactaceae:['cactus',3,1,1,20], Crassulaceae:['suculenta',3,1,1,14], Orchidaceae:['orquidea',2,2,3,7],
+  Araceae:['tropical',2,2,3,7], Arecaceae:['palmera',2,2,2,10], Asparagaceae:['tropical',2,1,2,12],
+  Polypodiaceae:['helecho',1,3,3,4], Dryopteridaceae:['helecho',1,2,3,5], Pteridaceae:['helecho',1,3,3,4],
+  Aspleniaceae:['helecho',1,3,3,5], Lamiaceae:['aromatica',3,1,1,8], Apiaceae:['hortaliza',2,2,2,4],
+  Brassicaceae:['hortaliza',3,3,2,3], Cucurbitaceae:['hortaliza',3,3,2,2], Solanaceae:['hortaliza',3,3,2,3],
+  Rosaceae:['arbusto',3,2,2,6], Fabaceae:['vivaz',3,2,2,6], Asteraceae:['flor',3,2,2,5],
+  Ericaceae:['acidofila',2,2,3,5], Hydrangeaceae:['acidofila',1,3,3,4], Malvaceae:['arbusto',3,2,2,5],
+  Rutaceae:['frutal',3,2,2,7], Oleaceae:['arbusto',3,2,2,8], Moraceae:['tropical',2,2,2,8],
+  Euphorbiaceae:['suculenta',3,1,1,12], Geraniaceae:['flor',3,2,1,5], Begoniaceae:['tropical',2,2,3,6],
+  Amaryllidaceae:['bulbosa',3,2,2,7], Liliaceae:['bulbosa',3,2,2,7], Iridaceae:['bulbosa',3,2,2,7],
+  Bromeliaceae:['tropical',2,2,3,8], Marantaceae:['tropical',1,2,3,5], Gesneriaceae:['tropical',2,2,2,7],
+  Pinaceae:['conifera',3,1,1,14], Cupressaceae:['conifera',3,1,1,14], Fagaceae:['arbol',3,2,2,12],
+  Betulaceae:['arbol',3,2,2,9], Salicaceae:['arbol',3,3,3,5], Sapindaceae:['arbol',2,2,2,8],
+  Myrtaceae:['arbusto',3,2,2,8], Vitaceae:['trepadora',3,1,1,10], Ranunculaceae:['vivaz',2,2,2,6],
+  Violaceae:['flor',2,2,2,4], Caryophyllaceae:['vivaz',3,2,2,6], Plantaginaceae:['vivaz',3,2,2,7],
+  Poaceae:['vivaz',3,2,2,6], Amaranthaceae:['hortaliza',3,2,2,4], Apocynaceae:['arbusto',3,1,1,8],
+  Balsaminaceae:['flor',1,3,3,3], Primulaceae:['flor',2,2,2,5], Saxifragaceae:['vivaz',2,2,2,6],
+  Verbenaceae:['arbusto',3,2,1,5], Nyctaginaceae:['trepadora',3,1,1,8], Musaceae:['tropical',3,3,3,4],
+  Strelitziaceae:['tropical',3,2,2,8], Piperaceae:['tropical',2,1,2,10], Commelinaceae:['tropical',2,2,2,6]
+};
+
+const LUZ_TXT = {1:'Sombra o luz indirecta. El sol directo del mediodía le quema la hoja.',
+                 2:'Mucha claridad pero filtrada, o sol suave de primera hora.',
+                 3:'Sol directo, varias horas al día.'};
+const SEC_TXT = {1:'la tierra se seque por completo', 2:'los dos primeros dedos de tierra estén secos', 3:'la superficie empiece a secarse'};
+
+function cuidadoPara(gen, fam){
+  const porGen = gen && CARE[gen], porFam = fam && CARE_FAM[fam];
+  const a = porGen || porFam || ['vivaz',2,2,2,7];
+  return {t:a[0], l:a[1], r:a[2], h:a[3], d:a[4], n:a[5]||'', gen:!!porGen, fam:!porGen&&!!porFam};
+}
+function cuidadosDe(c){
+  const t = TIPOS[c.t] || TIPOS.vivaz;
+  return {
+    luz: LUZ_TXT[c.l],
+    riego: 'Cada '+c.d+' días más o menos en primavera y verano, esperando a que '+SEC_TXT[c.r]+'. En invierno, la mitad de a menudo.',
+    suelo: t.suelo, temperatura: t.temp, abono: t.abono, poda: t.poda
+  };
+}
+function fichaDe(res){
+  const c = cuidadoPara(res.genus, res.family);
+  const pct = Math.round((res.score||0)*100);
+  const origen = c.gen ? 'Cuidados del género '+res.genus+' según la guía de la app.'
+               : (c.fam ? 'Sin ficha propia de la especie: se aplican los cuidados típicos de la familia '+res.family+'. Ajústalos si ves que no encaja.'
+                        : 'Sin ficha de cuidados para esta planta: se muestran valores generales. Corrige el riego a mano en su ficha.');
+  return {
+    nombreCientifico: res.sci,
+    nombreComun: res.common || res.sci,
+    familia: res.family || '',
+    genero: res.genus || '',
+    confianza: pct>=45?'alta':(pct>=18?'media':'baja'),
+    coincidencia: pct,
+    escalas:{luz:c.l, riego:c.r, humedad:c.h},
+    diasRiego: c.d,
+    cuidados: cuidadosDe(c),
+    descripcion: 'Identificada con Pl@ntNet, con un '+pct+' % de coincidencia. '+origen,
+    rasgos: res.otros && res.otros.length ? ['También se la llama '+res.otros.join(', ')] : [],
+    consejo: c.n || (TIPOS[c.t]||TIPOS.vivaz).consejo,
+    tipo: c.t, fuente:'plantnet'
+  };
+}
+function fichaManual(nombre, cientifico, tipo, dias){
+  const t = TIPOS[tipo] ? tipo : 'vivaz';
+  const base = {suculenta:[3,1,1,14],cactus:[3,1,1,20],tropical:[2,2,2,7],helecho:[1,3,3,4],orquidea:[2,2,3,7],
+    aromatica:[3,1,1,8],hortaliza:[3,3,2,3],frutal:[3,2,2,8],arbusto:[3,2,2,7],flor:[3,2,2,4],
+    trepadora:[3,2,2,6],bulbosa:[3,2,2,7],arbol:[3,2,2,12],conifera:[3,1,1,14],acidofila:[1,2,3,5],
+    palmera:[2,2,2,10],vivaz:[2,2,2,7]}[t];
+  const c = {t:t, l:base[0], r:base[1], h:base[2], d:(dias>0?dias:base[3]), n:''};
+  return {
+    nombreCientifico: cientifico || '', nombreComun: nombre,
+    familia:'', confianza:'—',
+    escalas:{luz:c.l, riego:c.r, humedad:c.h}, diasRiego:c.d,
+    cuidados: cuidadosDe(c),
+    descripcion:'Añadida a mano. Cuidados típicos de '+ETIQ[t]+'; cámbialos a tu gusto desde la ficha.',
+    consejo:(TIPOS[t]||TIPOS.vivaz).consejo, tipo:t, fuente:'manual'
+  };
+}
+const ETIQ = {suculenta:'planta suculenta',cactus:'cactus',tropical:'planta de interior tropical',helecho:'helecho',
+  orquidea:'orquídea',aromatica:'planta aromática',hortaliza:'hortaliza',frutal:'frutal',arbusto:'arbusto de jardín',
+  flor:'flor de temporada',trepadora:'trepadora',bulbosa:'bulbo',arbol:'árbol',conifera:'conífera',
+  acidofila:'planta de tierra ácida',palmera:'palmera',vivaz:'planta vivaz'};
+
+/* ============ diagnóstico: guía local por síntomas ============ */
+const SINTOMAS = [
+  {g:'Hojas', l:[
+    ['am-gen','Hojas amarillas'],
+    ['am-nerv','Amarillas con los nervios verdes'],
+    ['pal','Hojas pálidas o descoloridas'],
+    ['puntas','Puntas y bordes secos'],
+    ['man-mar','Manchas marrones o negras'],
+    ['man-claras','Manchas claras, como quemadas'],
+    ['rizadas','Hojas rizadas o deformadas'],
+    ['mustias','Hojas mustias, caídas'],
+    ['caen','Se le caen las hojas'],
+    ['peq','Hojas nuevas más pequeñas de lo normal']
+  ]},
+  {g:'Bichos y suciedad', l:[
+    ['telas','Telarañas finas entre las hojas'],
+    ['punteado','Punteado fino, como polvo, en el haz'],
+    ['pulgon','Bichitos verdes o negros en los brotes'],
+    ['algodon','Motas blancas algodonosas'],
+    ['bultos','Bultitos marrones pegados al tallo'],
+    ['moscas','Nube de moscas blancas al mover la planta'],
+    ['pegajoso','Hojas pegajosas o con hollín negro'],
+    ['hormigas','Hormigas subiendo por la planta'],
+    ['agujeros','Agujeros o mordiscos en las hojas'],
+    ['rastro','Rastro brillante de babosa'],
+    ['galerias','Galerías blancas dibujadas en la hoja'],
+    ['mosquitos','Mosquitas negras saliendo de la tierra']
+  ]},
+  {g:'Hongos', l:[
+    ['polvo-bl','Polvo blanco sobre las hojas'],
+    ['moho-gris','Moho gris y peludo en flores u hojas'],
+    ['naranja','Pústulas naranjas por el envés'],
+    ['aceitosas','Manchas aceitosas que se vuelven marrones']
+  ]},
+  {g:'Tallo, tierra y porte', l:[
+    ['tallo-bl','Tallo blando u oscuro en la base'],
+    ['t-mojada','La tierra está siempre mojada'],
+    ['t-seca','La tierra está muy seca o despegada'],
+    ['moho-t','Moho o costra blanca en la tierra'],
+    ['raices','Raíces asomando por los agujeros'],
+    ['largos','Tallos largos y débiles, buscando la luz'],
+    ['parada','Lleva meses sin crecer'],
+    ['no-flor','No florece'],
+    ['olor','Huele mal la tierra']
+  ]}
+];
+
+const PROBLEMAS = [
+  {n:'Exceso de riego', g:'moderada', clave:['t-mojada'],
+   s:['am-gen','mustias','t-mojada','caen','moho-t','mosquitos','tallo-bl','olor'],
+   causas:['Se riega más a menudo de lo que la tierra tarda en secar.','Maceta sin agujero o plato con agua estancada.','Sustrato compacto que no deja pasar el aire.'],
+   trat:['Deja de regar y no vuelvas hasta que la tierra esté seca dos dedos hacia abajo.','Vacía el plato siempre que quede agua.','Saca el cepellón y mira las raíces: las blandas y marrones se cortan con tijera limpia.','Si el cepellón está empapado, trasplanta a tierra nueva con perlita o arena.','Ponla en sitio aireado y con luz, sin sol fuerte, hasta que reaccione.'],
+   prev:['Riega por peso: la maceta ligera pide agua, la pesada no.','Usa siempre maceta con agujero y sustrato que drene.'],
+   plazo:'Diez o quince días para ver hoja nueva sana.',
+   contagio:'No se contagia, pero suele repetirse en todas las plantas regadas igual.'},
+
+  {n:'Falta de riego', g:'leve', clave:['t-seca'],
+   s:['mustias','t-seca','puntas','caen','am-gen','parada'],
+   causas:['Riegos demasiado espaciados o demasiado cortos.','Maceta pequeña que se seca en un día.','Sustrato de turba que, muy seco, repele el agua.'],
+   trat:['Riega despacio hasta que salga agua por abajo.','Si el agua se escurre sin mojar, mete la maceta en un barreño 20 minutos.','Quita lo que ya está seco del todo; eso no se recupera.','Acorta el intervalo de riego en su ficha unos días.'],
+   prev:['Acolcha la superficie para que aguante más.','En verano revisa cada dos o tres días.'],
+   plazo:'Unas horas para enderezarse; unas semanas para hoja nueva.',
+   contagio:'Ninguno.'},
+
+  {n:'Podredumbre de raíz o de cuello', g:'grave', clave:['tallo-bl'],
+   s:['tallo-bl','mustias','t-mojada','olor','am-gen','moho-t'],
+   causas:['Hongos del suelo aprovechando el encharcamiento.','Planta enterrada más honda de lo que estaba.','Riego frecuente con frío.'],
+   trat:['Saca la planta de la maceta y limpia la tierra de las raíces.','Corta con tijera limpia todo lo blando, oscuro o maloliente.','Deja orear el cepellón unas horas a la sombra.','Replanta en sustrato nuevo y drenante, sin enterrar el cuello.','Riega muy poco las dos semanas siguientes.'],
+   prev:['Maceta justa, no enorme.','Nunca dejes el plato con agua.'],
+   plazo:'Tres o cuatro semanas, y no siempre se salva.',
+   contagio:'Tira la tierra vieja y desinfecta la maceta antes de reutilizarla.'},
+
+  {n:'Falta de luz', g:'leve', clave:['largos'],
+   s:['largos','peq','no-flor','pal','parada','caen'],
+   causas:['Sitio demasiado oscuro para lo que pide.','Días cortos de invierno.','Otra planta o un mueble le hace sombra.'],
+   trat:['Acércala a una ventana o sácala a un sitio más claro, subiendo la luz poco a poco.','Corta los tallos alargados por encima de una yema para que rebrote compacta.','Gira la maceta un cuarto de vuelta cada semana.'],
+   prev:['Ten en cuenta que en invierno entra bastante menos luz por la misma ventana.'],
+   plazo:'Un mes para notar brotes más cortos y hojas más grandes.',
+   contagio:'Ninguno.'},
+
+  {n:'Exceso de sol o golpe de calor', g:'leve', clave:['man-claras'],
+   s:['man-claras','puntas','pal','mustias','caen'],
+   causas:['Cambio brusco de sombra a sol pleno.','Sol de mediodía en verano sobre hoja tierna.','Cristal que hace lupa.'],
+   trat:['Muévela a media sombra durante las horas centrales.','Corta las hojas quemadas del todo; las manchadas se quedan así.','Riega temprano, nunca con el sol dando de pleno.'],
+   prev:['Acostúmbrala al sol poco a poco, una hora más cada varios días.'],
+   plazo:'La hoja nueva ya saldrá sana en dos o tres semanas.',
+   contagio:'Ninguno.'},
+
+  {n:'Araña roja', g:'moderada', clave:['telas'],
+   s:['telas','punteado','pal','caen','am-gen'],
+   causas:['Ambiente seco y caluroso, típico de interior con calefacción.','Planta polvorienta y poco ventilada.'],
+   trat:['Ducha la planta con agua a presión suave, insistiendo en el envés.','Pulveriza con agua y jabón potásico cada cinco días, tres veces.','Sube la humedad alrededor y limpia las hojas a menudo.','Aísla la planta mientras dure el tratamiento.'],
+   prev:['Pulveriza agua sobre el envés en épocas secas.','Revisa el envés una vez por semana: se ven antes las telas que los bichos.'],
+   plazo:'Dos o tres semanas de tratamiento seguido.',
+   contagio:'Alto: salta a las plantas vecinas. Sepáralas ya.'},
+
+  {n:'Pulgón', g:'leve', clave:['pulgon'],
+   s:['pulgon','pegajoso','hormigas','rizadas','peq'],
+   causas:['Brotes tiernos por exceso de abono con nitrógeno.','Primavera templada, que es su temporada.','Hormigas que los crían por la melaza.'],
+   trat:['Aplasta las colonias con los dedos o tíralas con un chorro de agua.','Pulveriza jabón potásico al atardecer, dos o tres veces separadas cinco días.','Corta los brotes más infestados.','Corta el paso a las hormigas con una banda de grasa en el tronco.'],
+   prev:['No te pases con el abono nitrogenado.','Respeta a las mariquitas: se comen cientos al día.'],
+   plazo:'Una semana o dos.',
+   contagio:'Pasa fácil a las vecinas y puede traer virus.'},
+
+  {n:'Cochinilla', g:'moderada', clave:['algodon'],
+   s:['algodon','bultos','pegajoso','am-gen','parada'],
+   causas:['Ambiente cálido y seco.','Planta muy tupida y poco ventilada.','Entró con una planta nueva.'],
+   trat:['Quita las motas una a una con un bastoncillo mojado en alcohol.','Pulveriza aceite de neem o jabón potásico cada semana, tres o cuatro veces.','Revisa el envés, las axilas y el cuello, que es donde se esconden.','Si una rama está tomada del todo, córtala.'],
+   prev:['Cuarentena de dos semanas a toda planta nueva.','Limpia las hojas con regularidad.'],
+   plazo:'Un mes largo; es tenaz.',
+   contagio:'Sí, sobre todo entre plantas de interior juntas.'},
+
+  {n:'Mosca blanca', g:'moderada', clave:['moscas'],
+   s:['moscas','pegajoso','am-gen','pal'],
+   causas:['Calor y poca ventilación, típico de invernadero o galería.','Plantas muy juntas.'],
+   trat:['Cuelga trampas cromáticas amarillas para bajar la población adulta.','Pulveriza jabón potásico por el envés cada cinco días.','Aspira suavemente la nube de adultos a primera hora, cuando están torpes.','Retira las hojas bajas muy afectadas.'],
+   prev:['Ventila y no amontones las macetas.'],
+   plazo:'Tres o cuatro semanas.',
+   contagio:'Alto entre plantas cercanas.'},
+
+  {n:'Trips', g:'moderada', clave:['punteado'],
+   s:['punteado','rizadas','pal','man-claras','no-flor'],
+   causas:['Tiempo seco y caluroso.','Entrada desde flores cortadas o planta nueva.'],
+   trat:['Coloca trampas azules junto a la planta.','Pulveriza jabón potásico o neem cada cinco días, tres veces.','Quita las flores dañadas, que es donde se refugian.'],
+   prev:['Revisa las flores antes de meter planta nueva en casa.'],
+   plazo:'Tres semanas.',
+   contagio:'Sí, y transmiten virus.'},
+
+  {n:'Oídio', g:'leve', clave:['polvo-bl'],
+   s:['polvo-bl','rizadas','caen','man-claras'],
+   causas:['Noches húmedas y días secos.','Poca ventilación entre las ramas.','Follaje mojado al atardecer.'],
+   trat:['Corta y tira las hojas más cubiertas, no las eches al compost.','Pulveriza azufre mojable o bicarbonato con unas gotas de jabón, cada siete días.','Aclara la planta para que corra el aire.','Riega al pie y por la mañana.'],
+   prev:['Evita plantar demasiado junto.','Elige variedades resistentes cuando puedas.'],
+   plazo:'Diez días para frenarlo; lo ya blanco no se limpia.',
+   contagio:'Se propaga por el aire a plantas de la misma familia.'},
+
+  {n:'Mildiu', g:'grave', clave:['aceitosas'],
+   s:['aceitosas','man-mar','moho-gris','caen','am-gen'],
+   causas:['Lluvia o riego por aspersión con temperatura suave.','Hojas mojadas muchas horas seguidas.'],
+   trat:['Retira y destruye las hojas afectadas.','Trata con cobre respetando el plazo de seguridad si es de huerta.','Deja de mojar las hojas por completo.','Airea la planta y separa las plantas vecinas.'],
+   prev:['Riego por goteo al pie.','Acolchado para que la lluvia no salpique tierra a las hojas.'],
+   plazo:'Se frena en una semana, pero vuelve si sigue la humedad.',
+   contagio:'Muy alto en tomates, patatas y vid.'},
+
+  {n:'Roya', g:'moderada', clave:['naranja'],
+   s:['naranja','am-gen','caen','man-mar'],
+   causas:['Humedad alta y temperaturas suaves.','Restos del año anterior con esporas.'],
+   trat:['Corta las hojas con pústulas y tíralas a la basura.','Trata con azufre o cobre cada diez días, dos o tres veces.','Recoge y quita la hojarasca del pie.'],
+   prev:['No mojes el follaje.','Limpia bien el pie de la planta en otoño.'],
+   plazo:'Dos o tres semanas.',
+   contagio:'Sí, por esporas en el aire.'},
+
+  {n:'Botritis o moho gris', g:'moderada', clave:['moho-gris'],
+   s:['moho-gris','man-mar','tallo-bl','caen'],
+   causas:['Humedad alta con poca ventilación.','Flores marchitas dejadas en la planta.','Heridas de poda sin cicatrizar.'],
+   trat:['Quita todo lo enmohecido con tijera limpia, cortando por tejido sano.','Ventila y baja la humedad alrededor.','Espacia los riegos y no mojes flores ni hojas.'],
+   prev:['Retira las flores pasadas cada pocos días.','Poda en día seco.'],
+   plazo:'Una o dos semanas.',
+   contagio:'Sí, sobre todo en plantas apretadas.'},
+
+  {n:'Manchas foliares por hongos', g:'moderada', clave:['man-mar'],
+   s:['man-mar','caen','am-gen','aceitosas'],
+   causas:['Salpicaduras de agua desde la tierra.','Follaje mojado por la noche.','Planta debilitada por otra causa.'],
+   trat:['Corta las hojas manchadas y tíralas fuera del compost.','Pon acolchado para que no salpique la tierra.','Trata con cobre si avanza deprisa.','Riega al pie y por la mañana.'],
+   prev:['Aclara las ramas para que seque antes el follaje.'],
+   plazo:'La hoja nueva sale limpia en tres o cuatro semanas.',
+   contagio:'Moderado.'},
+
+  {n:'Clorosis por falta de hierro', g:'leve', clave:['am-nerv'],
+   s:['am-nerv','pal','peq','parada'],
+   causas:['Agua de riego dura o suelo calizo.','Sustrato agotado.','Exceso de riego que impide absorber el hierro.'],
+   trat:['Aplica quelato de hierro disuelto en el agua de riego.','Riega con agua de lluvia o embotellada baja en minerales.','Si es planta de tierra ácida, cambia el sustrato por uno de brezo.'],
+   prev:['No uses agua del grifo dura en camelias, hortensias o cítricos.'],
+   plazo:'Diez o quince días en verdear los brotes nuevos.',
+   contagio:'Ninguno.'},
+
+  {n:'Sustrato agotado o falta de abono', g:'leve', clave:['parada'],
+   s:['parada','pal','peq','am-gen','no-flor'],
+   causas:['Lleva más de un año en la misma tierra.','Nunca se ha abonado.','Riegos abundantes que lavan los nutrientes.'],
+   trat:['Abona con fertilizante líquido equilibrado cada 15 días en primavera y verano.','Cambia los tres dedos de tierra de arriba por sustrato nuevo con compost.','Si las raíces llenan la maceta, trasplanta a una un par de dedos mayor.'],
+   prev:['Renueva la tierra de la superficie cada primavera.'],
+   plazo:'Tres o cuatro semanas.',
+   contagio:'Ninguno.'},
+
+  {n:'Maceta pequeña, raíces apretadas', g:'leve', clave:['raices'],
+   s:['raices','parada','t-seca','peq','mustias'],
+   causas:['La planta ha crecido y el cepellón ocupa toda la maceta.','Lleva años sin trasplantar.'],
+   trat:['Trasplanta a una maceta dos o tres dedos más ancha, en primavera.','Suelta con los dedos las raíces enrolladas del fondo antes de plantar.','Riega abundante tras el trasplante y déjala a la sombra unos días.'],
+   prev:['Revisa el fondo una vez al año.'],
+   plazo:'Un mes para volver a crecer.',
+   contagio:'Ninguno.'},
+
+  {n:'Caracoles o babosas', g:'leve', clave:['rastro'],
+   s:['rastro','agujeros','caen'],
+   causas:['Humedad y noches templadas.','Escondrijos cerca: piedras, macetas, hojarasca.'],
+   trat:['Sal de noche con linterna y recógelos a mano: es lo que mejor funciona.','Rodea la planta con ceniza, cáscara de huevo o cobre.','Retira los escondites cercanos.','Como último recurso, cebos autorizados lejos del alcance de animales.'],
+   prev:['Riega por la mañana para que anochezca en seco.'],
+   plazo:'Inmediato si los retiras a mano.',
+   contagio:'Pasan de una planta a otra del huerto.'},
+
+  {n:'Orugas u otros masticadores', g:'moderada', clave:['agujeros'],
+   s:['agujeros','caen','peq'],
+   causas:['Mariposas y polillas que pusieron huevos en el envés.','Temporada cálida.'],
+   trat:['Revisa el envés y retira huevos y orugas a mano.','Trata con Bacillus thuringiensis, que solo afecta a las orugas.','Repite a los diez días para las nacidas después.'],
+   prev:['Malla fina en la huerta durante los meses de vuelo.'],
+   plazo:'Una semana.',
+   contagio:'Se extienden por las plantas del mismo grupo.'},
+
+  {n:'Minador de hojas', g:'leve', clave:['galerias'],
+   s:['galerias','am-gen','caen'],
+   causas:['Larvas que excavan entre las dos caras de la hoja.','Muy común en cítricos y en la huerta.'],
+   trat:['Corta y tira las hojas con galerías.','Trata los brotes tiernos con neem si se repite.','No abones de más: el brote tierno es lo que buscan.'],
+   prev:['Trampas cromáticas en primavera.'],
+   plazo:'La hoja dañada no se cura; la nueva sale limpia.',
+   contagio:'Moderado.'},
+
+  {n:'Mosquitas del sustrato', g:'leve', clave:['mosquitos'],
+   s:['mosquitos','t-mojada','moho-t'],
+   causas:['Tierra siempre húmeda en superficie.','Sustrato con mucha materia orgánica sin descomponer.'],
+   trat:['Deja secar bien la capa de arriba entre riegos.','Cubre la superficie con un dedo de arena gruesa.','Pon trampas amarillas para los adultos.','Riega por el plato una temporada.'],
+   prev:['No dejes hojas caídas pudriéndose sobre la tierra.'],
+   plazo:'Dos o tres semanas.',
+   contagio:'Pasan a las macetas vecinas, pero hacen poco daño.'},
+
+  {n:'Exceso de sales o agua dura', g:'leve', clave:['moho-t'],
+   s:['moho-t','puntas','pal','parada'],
+   causas:['Agua del grifo muy mineralizada.','Abono acumulado sin lavar.','Riegos cortos que nunca drenan.'],
+   trat:['Lava el cepellón: riega abundante hasta que salga mucha agua por abajo, tres veces seguidas.','Retira la costra blanca de la superficie y pon tierra nueva.','Usa agua de lluvia o embotellada y abona más flojo.'],
+   prev:['Un riego copioso de vez en cuando lava mejor que muchos pequeños.'],
+   plazo:'Dos o tres semanas.',
+   contagio:'Ninguno.'},
+
+  {n:'Golpe de frío o corriente de aire', g:'moderada', clave:['man-mar'],
+   s:['man-mar','caen','mustias','tallo-bl'],
+   causas:['Bajada brusca de temperatura o helada.','Ventana o puerta que da justo encima.','Planta de interior dejada fuera de noche.'],
+   trat:['Cámbiala de sitio, lejos de corrientes y cristales fríos.','No cortes lo dañado hasta la primavera: protege lo que queda.','Riega poco mientras esté parada.'],
+   prev:['Mete las tiernas antes de la primera helada.','Manta térmica en las noches frías.'],
+   plazo:'Hasta la primavera siguiente.',
+   contagio:'Ninguno.'},
+
+  {n:'No florece', g:'leve', clave:['no-flor'],
+   s:['no-flor','largos','parada','peq'],
+   causas:['Poca luz.','Abono con demasiado nitrógeno, que da hoja y no flor.','Poda a destiempo, cortando la madera que iba a florecer.','Maceta demasiado grande.'],
+   trat:['Dale más horas de luz.','Cambia a un abono con más potasio, de floración.','Infórmate de cuándo podarla: muchas florecen sobre la madera del año anterior.','No la cambies a una maceta mucho mayor.'],
+   prev:['Poda siempre justo después de la floración.'],
+   plazo:'Hasta la siguiente temporada de flor.',
+   contagio:'Ninguno.'}
+];
+
+function diagnosticar(sel, ctx){
+  const puntos = PROBLEMAS.map(p=>{
+    let n=0;
+    sel.forEach(s=>{ if(p.s.indexOf(s)>=0) n += (p.clave.indexOf(s)>=0 ? 2.2 : 1); });
+    if(!n) return {p, v:0};
+    let v = n / (Math.sqrt(p.s.length) * Math.sqrt(sel.length||1));
+    const riegoMas = ['Exceso de riego','Podredumbre de raíz o de cuello','Mosquitas del sustrato'];
+    const riegoMenos = ['Falta de riego'];
+    if(ctx.riego==='reciente'){ if(riegoMas.indexOf(p.n)>=0) v*=1.35; if(riegoMenos.indexOf(p.n)>=0) v*=0.5; }
+    if(ctx.riego==='hace-mucho'){ if(riegoMas.indexOf(p.n)>=0) v*=0.5; if(riegoMenos.indexOf(p.n)>=0) v*=1.4; }
+    if(ctx.donde==='interior' && ['Mildiu','Roya','Caracoles o babosas','Orugas u otros masticadores'].indexOf(p.n)>=0) v*=0.45;
+    if(ctx.donde==='interior' && ['Araña roja','Cochinilla','Mosquitas del sustrato','Falta de luz'].indexOf(p.n)>=0) v*=1.2;
+    if(ctx.donde==='exterior' && ['Falta de luz'].indexOf(p.n)>=0) v*=0.6;
+    return {p, v};
+  }).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const max = puntos.length ? puntos[0].v : 1;
+  return puntos.slice(0,3).map(x=>({
+    problema:x.p.n, gravedad:x.p.g,
+    confianza: (x.v/max>=0.98 && x.v>=0.55) ? 'alta' : (x.v/max>=0.7 ? 'media' : 'baja'),
+    sintomas: sel.map(s=>ETQ[s]).filter(Boolean),
+    causas:x.p.causas, tratamiento:x.p.trat, prevencion:x.p.prev,
+    plazo:x.p.plazo, contagio:x.p.contagio, peso:Math.round((x.v/max)*100)
+  }));
+}
+const ETQ = (function(){ const m={}; SINTOMAS.forEach(g=>g.l.forEach(s=>m[s[0]]=s[1])); return m; })();
 
 /* ============ helpers ============ */
 const $ = id => document.getElementById(id);
@@ -554,35 +1200,61 @@ $('dgFile').onchange=e=>onFile('dg',e);
 $('dgFileCam').onchange=e=>onFile('dg',e);
 
 /* ============ identificar ============ */
+let idCands=null, idOrgano='auto';
 function idReset(){
-  idImg=null; idData=null;
+  idImg=null; idData=null; idCands=null;
   $('idStage').classList.add('hide'); $('idPick').classList.remove('hide'); $('idOut').innerHTML='';
 }
 $('idReset').onclick=idReset;
+$('idOrg').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+  idOrgano=b.dataset.org;
+  $('idOrg').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed', x.dataset.org===idOrgano));
+});
 $('idGo').onclick=async()=>{
   if(!idImg) return;
   $('idGo').disabled=true;
-  $('idOut').innerHTML=loading('Comparando hojas, flores y porte…');
+  $('idOut').innerHTML=loading('Comparando con la base de Pl@ntNet…');
   try{
-    const d=await askClaude(idImg.b64, PROMPT_ID);
-    if(d.esPlanta===false){
-      $('idOut').innerHTML=errBox('No se reconoce una planta en la foto'+(d.motivo?': '+d.motivo:'')+'. Prueba con otra imagen.');
-    }else{
-      idData=d;
-      $('idOut').innerHTML = fichaHTML(d, idImg.full)+
-        '<div class="card pad" style="margin-top:18px">'+
-          '<label class="fld" for="addLoc">Dónde la vas a poner (opcional)</label>'+
-          '<input class="text" id="addLoc" placeholder="Patio, balcón, maceta del living">'+
-          '<div class="row"><button class="btn" id="addBtn">Añadir a mi jardín</button>'+
-          '<button class="btn quiet" id="againBtn">Identificar otra</button></div>'+
-          '<div id="addMsg" class="note"></div>'+
-        '</div>';
-      $('addBtn').onclick=addToGarden;
-      $('againBtn').onclick=idReset;
-    }
-  }catch(err){ $('idOut').innerHTML=errBox(err.message); }
+    idCands = await plantnetId(idImg.full, idOrgano);
+    pintaCandidatos();
+  }catch(err){
+    $('idOut').innerHTML=errBox(err.message)+
+      '<div class="row" style="margin-top:12px"><button class="btn ghost" id="idMan">Añadirla a mano</button></div>';
+    $('idMan').onclick=()=>{ show('garden'); setTimeout(()=>abreManual(idImg?idImg.thumb:''),80); };
+  }
   $('idGo').disabled=false;
 };
+function pintaCandidatos(){
+  $('idOut').innerHTML =
+    '<div class="sec-title">Candidatas</div>'+
+    '<p class="note" style="margin-top:2px">Elige la que se parezca. El porcentaje es la seguridad de Pl@ntNet, no una certeza.</p>'+
+    '<div id="candList">'+ idCands.map((c,i)=>
+      '<button class="plant" data-i="'+i+'"><span>'+
+        '<span class="pn">'+esc(c.common||c.sci)+'</span><br>'+
+        '<span class="ps">'+esc(c.sci)+'</span>'+
+        '<span class="pl">'+esc(c.family||'')+(c.family&&c.genus?' · ':'')+esc(c.genus||'')+'</span>'+
+        '<span class="pl'+(c.score>=0.45?' due':'')+'">'+Math.round(c.score*100)+' % de coincidencia</span>'+
+      '</span></button>').join('')+'</div>'+
+    '<div class="row" style="margin-top:14px"><button class="btn quiet" id="againBtn">Otra foto</button>'+
+    '<button class="btn quiet" id="manBtn">Ninguna: añadir a mano</button></div>'+
+    '<div id="fichaOut"></div>';
+  $('candList').querySelectorAll('.plant').forEach(b=>b.onclick=()=>eligeCandidata(parseInt(b.dataset.i)));
+  $('againBtn').onclick=idReset;
+  $('manBtn').onclick=()=>{ show('garden'); setTimeout(()=>abreManual(idImg?idImg.thumb:''),80); };
+}
+function eligeCandidata(i){
+  const c=idCands[i]; if(!c) return;
+  idData = fichaDe(c);
+  $('fichaOut').innerHTML = fichaHTML(idData, idImg.full)+
+    '<div class="card pad" style="margin-top:18px">'+
+      '<label class="fld" for="addLoc">Dónde la vas a poner (opcional)</label>'+
+      '<input class="text" id="addLoc" placeholder="Patio, galería, maceta del salón">'+
+      '<div class="row"><button class="btn" id="addBtn">Añadir a mi jardín</button></div>'+
+      '<div id="addMsg" class="note"></div>'+
+    '</div>';
+  $('addBtn').onclick=addToGarden;
+  $('fichaOut').scrollIntoView({behavior:'smooth',block:'start'});
+}
 async function addToGarden(){
   if(!idData) return;
   const btn=$('addBtn'); btn.disabled=true;
@@ -603,6 +1275,64 @@ async function addToGarden(){
     btn.disabled=false;
   }
 }
+
+/* ============ alta a mano (sin internet) ============ */
+let manFoto='';
+function abreManual(foto){
+  manFoto = foto || '';
+  const opts = Object.keys(ETIQ).map(k=>'<option value="'+k+'">'+ETIQ[k].charAt(0).toUpperCase()+ETIQ[k].slice(1)+'</option>').join('');
+  $('addManBox').classList.remove('hide');
+  $('addManBox').innerHTML =
+    '<div class="card pad" style="margin-bottom:14px">'+
+      (manFoto?'<img class="preview" src="'+manFoto+'" alt="" style="margin-bottom:12px">':'')+
+      '<label class="fld" for="manNom">Cómo la llamas</label>'+
+      '<input class="text" id="manNom" placeholder="Hortensia del muro">'+
+      '<label class="fld" for="manSci" style="display:block;margin-top:10px">Nombre científico (si lo sabes)</label>'+
+      '<input class="text" id="manSci" placeholder="Hydrangea macrophylla">'+
+      '<label class="fld" for="manTipo" style="display:block;margin-top:10px">Qué tipo de planta es</label>'+
+      '<select class="text" id="manTipo">'+opts+'</select>'+
+      '<label class="fld" for="manDias" style="display:block;margin-top:10px">Regar cada cuántos días (opcional)</label>'+
+      '<input class="text" id="manDias" type="number" min="1" max="90" placeholder="lo deja la app si lo dejas vacío">'+
+      '<label class="fld" for="manLoc" style="display:block;margin-top:10px">Dónde está</label>'+
+      '<input class="text" id="manLoc" placeholder="Terraza, huerta, salón">'+
+      '<div class="row"><button class="btn" id="manSave">Guardar en mi jardín</button>'+
+      '<button class="btn quiet" id="manCancel">Cancelar</button>'+
+      '<button class="btn ghost" id="manFotoBtn">'+(manFoto?'Cambiar foto':'Añadir foto')+'</button></div>'+
+      '<div id="manMsg" class="note"></div>'+
+    '</div>';
+  $('manCancel').onclick=cierraManual;
+  $('manFotoBtn').onclick=()=>$('manFile').click();
+  $('manSave').onclick=async()=>{
+    const nom=($('manNom').value||'').trim();
+    if(!nom){ $('manMsg').textContent='Ponle al menos un nombre.'; return; }
+    $('manSave').disabled=true;
+    const planta={
+      id:'p'+Date.now()+Math.floor(Math.random()*1000), creada:Date.now(),
+      ubicacion:($('manLoc').value||'').trim(), foto:manFoto,
+      ficha:fichaManual(nom, ($('manSci').value||'').trim(), $('manTipo').value, parseInt($('manDias').value)),
+      historial:[], notas:'', ultimoRiego:null, intervaloRiego:parseInt($('manDias').value)>0?parseInt($('manDias').value):null
+    };
+    try{ await store.save(planta); cierraManual(); renderGarden(); }
+    catch(e){ $('manMsg').textContent='No se pudo guardar.'; $('manSave').disabled=false; }
+  };
+  $('addManBox').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function cierraManual(){ $('addManBox').classList.add('hide'); $('addManBox').innerHTML=''; manFoto=''; }
+$('manFile').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  try{
+    const img=await processImage(f);
+    manFoto=img.thumb;
+    const prev=$('addManBox').querySelector('img.preview');
+    if(prev){ prev.src=manFoto; } else {
+      $('addManBox').querySelector('.card').insertAdjacentHTML('afterbegin','<img class="preview" src="'+manFoto+'" alt="" style="margin-bottom:12px">');
+    }
+    $('manFotoBtn').textContent='Cambiar foto';
+  }catch(err){ $('manMsg').textContent=err.message; }
+};
+$('addManBtn').onclick=()=>{ if($('addManBox').classList.contains('hide')) abreManual(''); else cierraManual(); };
+
 
 /* ============ jardín ============ */
 let jardin=[];
@@ -691,7 +1421,8 @@ function openDetail(id){
 $('detBack').onclick=()=>show('garden');
 
 /* ============ diagnóstico ============ */
-let diagPlantId=null;
+let diagPlantId=null, dgSel=[], dgCtx={donde:'', riego:''}, dgRes=null;
+
 async function renderChips(){
   jardin=await store.all();
   const chips=[{id:null,n:'Sin especificar'}].concat(jardin.map(p=>({id:p.id,n:(p.ficha&&p.ficha.nombreComun)||'Planta'})));
@@ -701,87 +1432,120 @@ async function renderChips(){
     diagPlantId=b.dataset.id||null;
     $('diagChips').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',(x.dataset.id||null)===diagPlantId));
   });
+  if(!$('dgSint').innerHTML) pintaSintomas();
+}
+function pintaSintomas(){
+  $('dgSint').innerHTML = SINTOMAS.map(g=>
+    '<div class="sec-title">'+esc(g.g)+'</div>'+
+    '<div class="chips">'+g.l.map(s=>'<button class="chip" data-s="'+s[0]+'" aria-pressed="false">'+esc(s[1])+'</button>').join('')+'</div>'
+  ).join('');
+  $('dgSint').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.s, i=dgSel.indexOf(id);
+    if(i>=0) dgSel.splice(i,1); else dgSel.push(id);
+    b.setAttribute('aria-pressed', i<0);
+    $('dgCount').textContent = dgSel.length ? dgSel.length+' señal'+(dgSel.length===1?'':'es')+' marcada'+(dgSel.length===1?'':'s') : '';
+  });
+  $('dgCtxBox').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.k;
+    dgCtx[k] = dgCtx[k]===b.dataset.v ? '' : b.dataset.v;
+    $('dgCtxBox').querySelectorAll('.chip[data-k="'+k+'"]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.v===dgCtx[k]));
+  });
 }
 $('dgReset').onclick=()=>{
   dgImg=null;
-  $('dgStage').classList.add('hide'); $('dgPick').classList.remove('hide'); $('dgOut').innerHTML='';
+  $('dgStage').classList.add('hide'); $('dgPick').classList.remove('hide');
 };
-$('dgGo').onclick=async()=>{
-  if(!dgImg) return;
-  $('dgGo').disabled=true;
-  $('dgOut').innerHTML=loading('Revisando hojas, manchas y signos…');
-  try{
-    const p=jardin.find(x=>x.id===diagPlantId);
-    let ctx='';
-    if(p&&p.ficha){
-      const f=p.ficha, r=estadoRiego(p);
-      ctx=' La planta es '+(f.nombreComun||'')+' ('+(f.nombreCientifico||'')+')'+
-          (p.ubicacion?', ubicada en: '+p.ubicacion:'')+
-          '. Riego actual: cada '+r.iv+' días'+(r.dias!=null?', último hace '+r.dias+' días':'')+'.'+
-          (p.notas?' Notas del dueño: '+p.notas:'');
-    }
-    const d=await askClaude(dgImg.b64, promptDiag(ctx));
-    if(d.esPlanta===false){
-      $('dgOut').innerHTML=errBox('No se reconoce una planta en la foto'+(d.motivo?': '+d.motivo:'')+'.');
-    }else{
-      $('dgOut').innerHTML=diagHTML(d, dgImg.full)+
-        (p?'<div class="row" style="margin-top:18px"><button class="btn ghost" id="dgSave">Guardar en la ficha de '+esc((p.ficha&&p.ficha.nombreComun)||'la planta')+'</button></div><div id="dgMsg" class="note"></div>'
-          :'<p class="note">Elige una planta de tu jardín arriba si quieres guardar este diagnóstico en su ficha.</p>');
-      if(p) $('dgSave').onclick=async()=>{
-        $('dgSave').disabled=true;
-        p.historial=p.historial||[];
-        p.historial.unshift({
-          fecha:new Date().toLocaleDateString('es',{day:'numeric',month:'long',year:'numeric'}),
-          problema:d.problema, gravedad:d.gravedad, tratamiento:arr(d.tratamiento)
-        });
-        try{ await store.save(p); $('dgSave').textContent='Guardado en la ficha'; }
-        catch(e){ $('dgMsg').textContent='No se pudo guardar.'; $('dgSave').disabled=false; }
-      };
-    }
-  }catch(err){ $('dgOut').innerHTML=errBox(err.message); }
-  $('dgGo').disabled=false;
+$('dgClear').onclick=()=>{
+  dgSel=[]; dgCtx={donde:'',riego:''}; dgRes=null; dgImg=null;
+  $('dgSint').querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed','false'));
+  $('dgCtxBox').querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed','false'));
+  $('dgStage').classList.add('hide'); $('dgPick').classList.remove('hide');
+  $('dgOut').innerHTML=''; $('dgCount').textContent='';
+  window.scrollTo(0,0);
 };
+$('dgGo').onclick=()=>{
+  if(!dgSel.length){ $('dgOut').innerHTML=errBox('Marca al menos una señal de las de arriba.'); return; }
+  const p=jardin.find(x=>x.id===diagPlantId);
+  const ctx=Object.assign({}, dgCtx);
+  if(!ctx.riego && p){
+    const r=estadoRiego(p);
+    if(r.dias!=null) ctx.riego = r.dias<=2 ? 'reciente' : (r.dias>=r.iv+3 ? 'hace-mucho' : '');
+  }
+  dgRes = diagnosticar(dgSel, ctx);
+  if(!dgRes.length){
+    $('dgOut').innerHTML=errBox('Con esas señales no doy con nada claro. Prueba a marcar alguna más, o mira la ficha de la planta para repasar sus cuidados.');
+    return;
+  }
+  pintaDiagnostico(0);
+  $('dgOut').scrollIntoView({behavior:'smooth',block:'start'});
+};
+function pintaDiagnostico(i){
+  const d=dgRes[i], p=jardin.find(x=>x.id===diagPlantId);
+  const otras = dgRes.map((x,j)=>j===i?'':
+    '<button class="chip" data-j="'+j+'">'+esc(x.problema)+' · '+x.peso+' %</button>').join('');
+  $('dgOut').innerHTML =
+    diagHTML(d, dgImg?dgImg.full:'')+
+    (otras.replace(/\s/g,'') ? '<div class="sec-title">Otras posibilidades</div><div class="chips" id="dgAlt">'+otras+'</div>' : '')+
+    (p?'<div class="row" style="margin-top:18px"><button class="btn ghost" id="dgSave">Guardar en la ficha de '+esc((p.ficha&&p.ficha.nombreComun)||'la planta')+'</button></div><div id="dgMsg" class="note"></div>'
+      :'<p class="note">Elige una planta de tu jardín arriba si quieres guardar este diagnóstico en su ficha.</p>')+
+    '<p class="note">Guía orientativa: compara con lo que ves antes de tratar, y ante una plaga en la huerta consulta los plazos de seguridad del producto.</p>';
+  if($('dgAlt')) $('dgAlt').querySelectorAll('.chip').forEach(b=>b.onclick=()=>pintaDiagnostico(parseInt(b.dataset.j)));
+  if(p && $('dgSave')) $('dgSave').onclick=async()=>{
+    $('dgSave').disabled=true;
+    p.historial=p.historial||[];
+    p.historial.unshift({
+      fecha:new Date().toLocaleDateString('es',{day:'numeric',month:'long',year:'numeric'}),
+      problema:d.problema, gravedad:d.gravedad, tratamiento:arr(d.tratamiento)
+    });
+    try{ await store.save(p); $('dgSave').textContent='Guardado en la ficha'; }
+    catch(e){ $('dgMsg').textContent='No se pudo guardar.'; $('dgSave').disabled=false; }
+  };
+}
+
 
 /* ============ ajustes ============ */
 function renderSettings(){
   $('apiKey').value='';
-  $('apiKey').placeholder = CFG.apiKey ? 'Escribe otra clave para cambiarla' : 'sk-ant-...';
+  $('apiKey').placeholder = CFG.apiKey ? 'Escribe otra clave para cambiarla' : '2b10...';
   $('keyState').textContent = CFG.apiKey
-    ? 'Hay una clave guardada, terminada en '+CFG.apiKey.slice(-6)+'. Pruébala para confirmar que responde.'
-    : 'No hay ninguna clave guardada.';
+    ? 'Hay una clave guardada, terminada en '+CFG.apiKey.slice(-4)+'. Pruébala para ver cuántas identificaciones te quedan hoy.'
+    : 'No hay ninguna clave guardada. Sin ella funciona todo menos identificar por foto.';
+  if($('syncState')) $('syncState').textContent = FB.estado;
   $('storeInfo').textContent = 'Guardado en: '+
     (BACKEND==='claude'?'almacenamiento de Claude':(BACKEND==='local'?'memoria del teléfono':'solo esta sesión, no se conserva al cerrar'))+'.';
 }
+$('syncIn').onclick=()=>fbEntrar(($('syncMail').value||'').trim(), $('syncPass').value);
+$('syncPass').onkeydown=e=>{ if(e.key==='Enter') $('syncIn').click(); };
+$('syncNow').onclick=()=>fbSync();
+$('syncLogout').onclick=()=>fbSalir();
 $('keyTest').onclick=async()=>{
-  $('keyMsg').innerHTML=loading('Preguntando al servidor…');
-  const headers={"Content-Type":"application/json"};
-  if(CFG.apiKey){
-    headers["x-api-key"]=CFG.apiKey;
-    headers["anthropic-version"]="2023-06-01";
-    headers["anthropic-dangerous-direct-browser-access"]="true";
-  }
+  if(!CFG.apiKey){ $('keyMsg').innerHTML=errBox('Guarda primero una clave.'); return; }
+  $('keyMsg').innerHTML=loading('Preguntando a Pl@ntNet…');
   try{
-    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:8,messages:[{role:"user",content:"Responde solo: ok"}]})});
-    if(r.ok) $('keyMsg').innerHTML=okBox('La clave responde. Identificación y diagnóstico funcionarán.');
-    else if(r.status===401||r.status===403) $('keyMsg').innerHTML=errBox('La clave no es válida o no tiene permisos (error '+r.status+').');
-    else if(r.status===429) $('keyMsg').innerHTML=errBox('La cuenta no tiene saldo o está limitada (error 429).');
-    else $('keyMsg').innerHTML=errBox('Respuesta inesperada del servidor (error '+r.status+').');
+    const q=await plantnetQuota();
+    if(q.ok){
+      const d=q.data||{};
+      const usadas=(d.identify&&d.identify.used)!=null?d.identify.used:null;
+      $('keyMsg').innerHTML=okBox('La clave responde.'+(usadas!=null?' Hoy llevas '+usadas+' identificaciones.':' Ya puedes identificar plantas.'));
+    }
+    else if(q.status===401||q.status===403) $('keyMsg').innerHTML=errBox('La clave no vale o no tiene permitido este dominio. En my.plantnet.org, en los ajustes de la clave, añade el dominio donde tengas la app.');
+    else $('keyMsg').innerHTML=errBox('Respuesta inesperada de Pl@ntNet (error '+q.status+').');
   }catch(e){
-    $('keyMsg').innerHTML=errBox('No hubo conexión con el servidor. Comprueba internet; si estás en el APK, el navegador interno puede estar bloqueando la llamada.');
+    $('keyMsg').innerHTML=errBox('No hubo conexión con Pl@ntNet. Comprueba internet.');
   }
 };
 $('keySave').onclick=async()=>{
   const v=$('apiKey').value.trim();
   if(!v){ $('keyMsg').innerHTML=errBox('Escribe la clave antes de guardar.'); return; }
-  CFG.apiKey=v; await db.set('config:apikey',v);
+  CFG.apiKey=v; await db.set('config:pnkey',v);
   $('apiKey').value=''; renderSettings();
   $('keyMsg').innerHTML=okBox('Clave guardada en este teléfono.');
 };
 $('keyClear').onclick=async()=>{
-  CFG.apiKey=''; await db.del('config:apikey'); $('apiKey').value=''; renderSettings();
+  CFG.apiKey=''; await db.del('config:pnkey'); $('apiKey').value=''; renderSettings();
   $('keyMsg').innerHTML=okBox('Clave borrada.');
 };
+
 $('bkExport').onclick=async()=>{
   const all=await store.all();
   $('backupBox').value=JSON.stringify({app:'herbario',v:1,plantas:all});
@@ -812,6 +1576,7 @@ $('bkImport').onclick=async()=>{
   await cfgLoad();
   renderChips();
   renderSettings();
+  fbBoot();
 })();
 </script>
 </body>
