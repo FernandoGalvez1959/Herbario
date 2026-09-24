@@ -82,9 +82,9 @@
   .plant .pl{font-size:13px;color:var(--muted);margin-top:3px;display:block}
   .plant .due{color:var(--warn);font-weight:700}
   .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:15px}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;-webkit-overflow-scrolling:touch}
-  .chip{flex:none;font-family:inherit;font-size:14px;padding:8px 13px;border-radius:999px;
-    border:1px solid var(--line);background:var(--paper);color:var(--muted);cursor:pointer;white-space:nowrap}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 10px}
+  .chip{flex:0 1 auto;max-width:100%;font-family:inherit;font-size:14px;padding:8px 13px;border-radius:999px;
+    border:1px solid var(--line);background:var(--paper);color:var(--muted);cursor:pointer;text-align:left}
   .chip[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
   .note{font-size:13px;color:var(--muted);margin-top:10px}
   input.text,textarea.text,select.text{width:100%;font-family:inherit;font-size:15px;padding:11px 12px;
@@ -218,11 +218,13 @@
     <div class="card pad">
       <p class="note" id="syncState" style="margin:0 0 10px">Comprobando…</p>
       <div id="syncForm">
-        <label class="fld" for="syncMail">Correo</label>
+        <p class="note" style="margin-top:0">Es tu cuenta de Firebase: el correo y la contraseña que creaste tú en Authentication. No tiene nada que ver con la clave de Pl@ntNet de más abajo.</p>
+        <label class="fld" for="syncMail">Correo de Firebase</label>
         <input class="text" id="syncMail" type="email" autocomplete="username" placeholder="el tuyo de Firebase">
-        <label class="fld" for="syncPass" style="display:block;margin-top:10px">Contraseña</label>
+        <label class="fld" for="syncPass" style="display:block;margin-top:10px">Contraseña de Firebase</label>
         <input class="text" id="syncPass" type="password" autocomplete="current-password">
-        <div class="row"><button class="btn" id="syncIn">Entrar</button></div>
+        <div class="row"><button class="btn" id="syncIn">Entrar</button>
+        <button class="btn quiet" id="verPass">Ver lo que escribo</button></div>
         <p class="note">Con la sesión iniciada, el jardín se guarda también en tu base de Firebase y aparece igual en el móvil y en el ordenador.</p>
       </div>
       <div id="syncOut" class="hide">
@@ -234,11 +236,13 @@
     <div class="sec-title">Identificación por foto</div>
 
     <div class="card pad">
+      <p class="note" style="margin-top:0">Es el código largo que te da my.plantnet.org al registrarte, del estilo <b>2b10AbCd...</b>. No es una contraseña tuya. Solo sirve para identificar plantas por foto: el jardín y el diagnóstico funcionan sin ella.</p>
       <label class="fld" for="apiKey">Clave de Pl@ntNet</label>
       <input class="text" id="apiKey" type="password" placeholder="2b10..." autocomplete="off">
-      <p class="note">Se saca gratis en my.plantnet.org: 500 identificaciones al día y sin fecha de caducidad. Solo hace falta para identificar por foto: el jardín y el diagnóstico funcionan sin clave y sin internet. Se guarda únicamente en este teléfono.</p>
       <div class="row"><button class="btn" id="keySave">Guardar clave</button>
-      <button class="btn ghost" id="keyTest">Probar la clave</button>
+      <button class="btn quiet" id="verKey">Ver lo que escribo</button></div>
+      <div class="row"><button class="btn ghost" id="keyTest">Probar la clave</button>
+      <button class="btn ghost" id="keyShow">Ver la guardada</button>
       <button class="btn quiet" id="keyClear">Borrar clave</button></div>
       <p class="note" id="keyState"></p>
       <div id="keyMsg"></div>
@@ -1514,6 +1518,22 @@ function renderSettings(){
   $('storeInfo').textContent = 'Guardado en: '+
     (BACKEND==='claude'?'almacenamiento de Claude':(BACKEND==='local'?'memoria del teléfono':'solo esta sesión, no se conserva al cerrar'))+'.';
 }
+function alterna(inp, btn){
+  const ver = inp.type==='password';
+  inp.type = ver ? 'text' : 'password';
+  btn.textContent = ver ? 'Ocultar' : 'Ver lo que escribo';
+}
+$('verPass').onclick=()=>alterna($('syncPass'), $('verPass'));
+$('verKey').onclick=()=>alterna($('apiKey'), $('verKey'));
+$('keyShow').onclick=()=>{
+  if(!CFG.apiKey){ $('keyMsg').innerHTML=errBox('Todavía no hay ninguna clave guardada.'); return; }
+  if($('keyShow').dataset.on==='1'){
+    $('keyShow').dataset.on=''; $('keyShow').textContent='Ver la guardada'; $('keyMsg').innerHTML='';
+  }else{
+    $('keyShow').dataset.on='1'; $('keyShow').textContent='Ocultar la guardada';
+    $('keyMsg').innerHTML='<div class="card pad" style="margin-top:10px;word-break:break-all"><b>Clave guardada</b><br>'+esc(CFG.apiKey)+'</div>';
+  }
+};
 $('syncIn').onclick=()=>fbEntrar(($('syncMail').value||'').trim(), $('syncPass').value);
 $('syncPass').onkeydown=e=>{ if(e.key==='Enter') $('syncIn').click(); };
 $('syncNow').onclick=()=>fbSync();
@@ -1538,11 +1558,15 @@ $('keySave').onclick=async()=>{
   const v=$('apiKey').value.trim();
   if(!v){ $('keyMsg').innerHTML=errBox('Escribe la clave antes de guardar.'); return; }
   CFG.apiKey=v; await db.set('config:pnkey',v);
-  $('apiKey').value=''; renderSettings();
+  $('apiKey').value=''; $('apiKey').type='password'; $('verKey').textContent='Ver lo que escribo';
+  $('keyShow').dataset.on=''; $('keyShow').textContent='Ver la guardada';
+  renderSettings();
   $('keyMsg').innerHTML=okBox('Clave guardada en este teléfono.');
 };
 $('keyClear').onclick=async()=>{
-  CFG.apiKey=''; await db.del('config:pnkey'); $('apiKey').value=''; renderSettings();
+  CFG.apiKey=''; await db.del('config:pnkey'); $('apiKey').value='';
+  $('keyShow').dataset.on=''; $('keyShow').textContent='Ver la guardada';
+  renderSettings();
   $('keyMsg').innerHTML=okBox('Clave borrada.');
 };
 
