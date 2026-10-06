@@ -223,6 +223,10 @@
         <input class="text" id="syncMail" type="email" autocomplete="username" placeholder="el tuyo de Firebase">
         <label class="fld" for="syncPass" style="display:block;margin-top:10px">Contraseña de Firebase</label>
         <input class="text" id="syncPass" type="password" autocomplete="current-password">
+        <label class="row" style="align-items:center;gap:8px">
+          <input type="checkbox" id="syncKeep" checked style="width:18px;height:18px;margin:0">
+          <span style="font-size:14px">Entrar sola la próxima vez</span>
+        </label>
         <div class="row"><button class="btn" id="syncIn">Entrar</button>
         <button class="btn quiet" id="verPass">Ver lo que escribo</button></div>
         <p class="note">Con la sesión iniciada, el jardín se guarda también en tu base de Firebase y aparece igual en el móvil y en el ordenador.</p>
@@ -250,13 +254,12 @@
 
     <div class="sec-title">Copia de seguridad</div>
     <div class="card pad">
-      <p style="margin:0 0 6px;font-size:15px">Copia el texto y guárdalo donde quieras. Para restaurar, pega ese mismo texto y confirma.</p>
-      <textarea class="text" id="backupBox" placeholder="Aquí aparece tu jardín en texto"></textarea>
+      <p style="margin:0 0 6px;font-size:15px">Se descarga un archivo con todo tu jardín, fotos incluidas. Guárdalo donde quieras y, el día que haga falta, restáuralo eligiéndolo.</p>
       <div class="row">
-        <button class="btn ghost" id="bkExport">Generar copia</button>
-        <button class="btn ghost" id="bkCopy">Copiar</button>
-        <button class="btn quiet" id="bkImport">Restaurar</button>
+        <button class="btn ghost" id="bkExport">Descargar copia</button>
+        <button class="btn quiet" id="bkImport">Restaurar desde archivo</button>
       </div>
+      <input type="file" accept=".json,application/json" id="bkFile" class="hide">
       <div id="bkMsg"></div>
     </div>
 
@@ -368,7 +371,7 @@ const FBCFG = {
   messagingSenderId: "554006726892",
   appId: "1:554006726892:web:0e865c88b4d9ef6b9f7dc9"
 };
-const FB = { ok:false, on:false, uid:null, correo:'', db:null, auth:null, estado:'Sin conectar' };
+const FB = { ok:false, on:false, uid:null, correo:'', db:null, auth:null, estado:'Sin conectar', intento:false };
 
 function fbEstado(t){ FB.estado=t; if($('syncState')) $('syncState').textContent=t; }
 
@@ -453,12 +456,17 @@ function fbListen(){
   });
 }
 
+async function credLeer(){
+  try{ const v=await db.get('config:cred'); return v?JSON.parse(v):null; }catch(e){ return null; }
+}
 async function fbEntrar(correo, clave){
   if(!FB.ok && !fbInit()){ fbEstado('No se cargó Firebase. Comprueba la conexión y recarga la página.'); return; }
   fbEstado('Entrando…');
   try{
     await FB.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await FB.auth.signInWithEmailAndPassword(correo, clave);
+    if(!$('syncKeep') || $('syncKeep').checked) await db.set('config:cred', JSON.stringify({m:correo,p:clave}));
+    else await db.del('config:cred');
   }catch(e){
     const c=(e&&e.code)||'';
     fbEstado(
@@ -470,6 +478,8 @@ async function fbEntrar(correo, clave){
   }
 }
 async function fbSalir(){
+  await db.del('config:cred');
+  FB.intento=true;
   try{ if(FB.on) FB.db.ref('plantas/'+FB.uid).off(); }catch(e){}
   try{ await FB.auth.signOut(); }catch(e){}
 }
@@ -487,6 +497,16 @@ function fbBoot(){
       FB.on=false; FB.uid=null; FB.correo='';
       if($('syncForm')) $('syncForm').classList.remove('hide');
       if($('syncOut')) $('syncOut').classList.add('hide');
+      if(!FB.intento){
+        const c=await credLeer();
+        if(c && c.m && c.p){
+          FB.intento=true;
+          if($('syncMail')) $('syncMail').value=c.m;
+          fbEstado('Entrando con tus datos guardados…');
+          fbEntrar(c.m, c.p);
+          return;
+        }
+      }
       fbEstado('Sin conectar. El jardín se guarda solo en este aparato.');
     }
     renderSettings();
@@ -1572,27 +1592,31 @@ $('keyClear').onclick=async()=>{
 
 $('bkExport').onclick=async()=>{
   const all=await store.all();
-  $('backupBox').value=JSON.stringify({app:'herbario',v:1,plantas:all});
-  $('bkMsg').innerHTML=okBox(all.length+' planta(s) en la copia. Cópiala y guárdala.');
-};
-$('bkCopy').onclick=async()=>{
-  const t=$('backupBox').value;
-  if(!t){ $('bkMsg').innerHTML=errBox('Genera la copia primero.'); return; }
-  try{ await navigator.clipboard.writeText(t); $('bkMsg').innerHTML=okBox('Copiado al portapapeles.'); }
-  catch(e){ $('backupBox').select(); $('bkMsg').innerHTML=errBox('Copia manualmente: el texto ya está seleccionado.'); }
-};
-$('bkImport').onclick=async()=>{
-  const btn=$('bkImport');
-  if(btn.dataset.sure!=='1'){ btn.dataset.sure='1'; btn.textContent='Confirmar: restaurar'; return; }
-  btn.dataset.sure=''; btn.textContent='Restaurar';
+  if(!all.length){ $('bkMsg').innerHTML=errBox('Todavía no hay plantas que guardar.'); return; }
+  const txt=JSON.stringify({app:'herbario',v:1,fecha:new Date().toISOString(),plantas:all});
+  const d=new Date(), dd=n=>String(n).padStart(2,'0');
+  const nombre='herbario-'+d.getFullYear()+'-'+dd(d.getMonth()+1)+'-'+dd(d.getDate())+'.json';
   try{
-    const data=JSON.parse($('backupBox').value);
+    const url=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
+    const a=document.createElement('a');
+    a.href=url; a.download=nombre; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    $('bkMsg').innerHTML=okBox(all.length+' planta(s) guardadas en el archivo '+nombre+'. Búscalo en Descargas.');
+  }catch(e){ $('bkMsg').innerHTML=errBox('El navegador no dejó descargar el archivo.'); }
+};
+$('bkImport').onclick=()=>$('bkFile').click();
+$('bkFile').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  $('bkMsg').innerHTML=loading('Leyendo el archivo…');
+  try{
+    const data=JSON.parse(await f.text());
     const list=(data&&data.plantas)||[];
-    if(!Array.isArray(list)||!list.length) throw new Error();
+    if(!Array.isArray(list)||!list.length) throw new Error('vacio');
     let n=0;
-    for(const p of list){ if(p&&p.id){ await store.save(p); n++; } }
-    $('bkMsg').innerHTML=okBox(n+' planta(s) restauradas.');
-  }catch(e){ $('bkMsg').innerHTML=errBox('El texto no es una copia válida de Herbario.'); }
+    for(const p of list){ if(p&&p.id){ p.mod=Date.now(); await store.save(p); n++; } }
+    $('bkMsg').innerHTML=okBox(n+' planta(s) restauradas'+(FB.on?' y subidas a tu Firebase.':' en este aparato.'));
+    jardin=await store.all();
+  }catch(err){ $('bkMsg').innerHTML=errBox('Ese archivo no parece una copia de Herbario. Tiene que ser el .json que descargaste desde aquí.'); }
 };
 
 /* ============ arranque ============ */
