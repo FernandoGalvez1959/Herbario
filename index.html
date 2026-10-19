@@ -212,30 +212,7 @@
   <!-- AJUSTES -->
   <section id="view-set" class="hide">
     <h2>Ajustes</h2>
-    <p class="lead">Sincronización, clave de identificación y copia de seguridad del jardín.</p>
-
-    <div class="sec-title">Sincronizar entre aparatos</div>
-    <div class="card pad">
-      <p class="note" id="syncState" style="margin:0 0 10px">Comprobando…</p>
-      <div id="syncForm">
-        <p class="note" style="margin-top:0">Es tu cuenta de Firebase: el correo y la contraseña que creaste tú en Authentication. No tiene nada que ver con la clave de Pl@ntNet de más abajo.</p>
-        <label class="fld" for="syncMail">Correo de Firebase</label>
-        <input class="text" id="syncMail" type="email" autocomplete="username" placeholder="el tuyo de Firebase">
-        <label class="fld" for="syncPass" style="display:block;margin-top:10px">Contraseña de Firebase</label>
-        <input class="text" id="syncPass" type="password" autocomplete="current-password">
-        <label class="row" style="align-items:center;gap:8px">
-          <input type="checkbox" id="syncKeep" checked style="width:18px;height:18px;margin:0">
-          <span style="font-size:14px">Entrar sola la próxima vez</span>
-        </label>
-        <div class="row"><button class="btn" id="syncIn">Entrar</button>
-        <button class="btn quiet" id="verPass">Ver lo que escribo</button></div>
-        <p class="note">Con la sesión iniciada, el jardín se guarda también en tu base de Firebase y aparece igual en el móvil y en el ordenador.</p>
-      </div>
-      <div id="syncOut" class="hide">
-        <div class="row"><button class="btn ghost" id="syncNow">Sincronizar ahora</button>
-        <button class="btn quiet" id="syncLogout">Cerrar sesión</button></div>
-      </div>
-    </div>
+    <p class="lead">Clave de identificación y copia de seguridad del jardín.</p>
 
     <div class="sec-title">Identificación por foto</div>
 
@@ -295,9 +272,6 @@
   </button>
 </nav>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 /* ============ almacenamiento (Claude, localStorage o memoria) ============ */
 const MEM = {};
@@ -337,7 +311,6 @@ const store = {
     p.mod = Date.now();
     const limpio = JSON.parse(JSON.stringify(p));
     await db.set('planta:'+p.id, JSON.stringify(limpio));
-    if(FB.on){ try{ await FB.db.ref('plantas/'+FB.uid+'/'+p.id).set(limpio); }catch(e){} }
   },
   async all(){
     const out=[];
@@ -348,200 +321,12 @@ const store = {
   },
   async remove(id){
     await db.del('planta:'+id);
-    if(FB.on){
-      try{
-        await FB.db.ref('plantas/'+FB.uid+'/'+id).remove();
-        await FB.db.ref('borradas/'+FB.uid+'/'+id).set(Date.now());
-      }catch(e){}
-    }
   }
 };
 
 /* ============ configuración ============ */
 const CFG = { apiKey:'' };
 async function cfgLoad(){ CFG.apiKey = (await db.get('config:pnkey')) || ''; }
-
-/* ============ sincronización con Firebase ============ */
-const FBCFG = {
-  apiKey: "AIzaSyDJjwKe9ZO0a3_g3iTAhfko6mi1Habjz_Y",
-  authDomain: "herbario-2ce4d.firebaseapp.com",
-  databaseURL: "https://herbario-2ce4d-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "herbario-2ce4d",
-  storageBucket: "herbario-2ce4d.firebasestorage.app",
-  messagingSenderId: "554006726892",
-  appId: "1:554006726892:web:0e865c88b4d9ef6b9f7dc9"
-};
-const FB = { ok:false, on:false, uid:null, correo:'', db:null, auth:null, estado:'Sin conectar', intento:false };
-
-function fbEstado(t){ FB.estado=t; if($('syncState')) $('syncState').textContent=t; }
-
-function fbInit(){
-  if(!window.firebase || !firebase.initializeApp) return false;
-  try{
-    firebase.initializeApp(FBCFG);
-    FB.auth = firebase.auth();
-    FB.db = firebase.database();
-    FB.ok = true;
-    return true;
-  }catch(e){ return false; }
-}
-
-async function localAll(){
-  const out=[];
-  for(const k of await db.keys('planta:')){
-    try{ const v=await db.get(k); if(v) out.push(JSON.parse(v)); }catch(e){}
-  }
-  return out;
-}
-async function localClear(){
-  for(const k of await db.keys('planta:')) await db.del(k);
-}
-
-async function fbSync(){
-  if(!FB.on) return;
-  fbEstado('Sincronizando…');
-  try{
-    const ref = FB.db.ref('plantas/'+FB.uid);
-    const tref = FB.db.ref('borradas/'+FB.uid);
-    const remote = (await ref.get()).val() || {};
-    const tomb   = (await tref.get()).val() || {};
-
-    const map = {};
-    (await localAll()).forEach(p=>{ if(p&&p.id) map[p.id]=p; });
-    Object.keys(remote).forEach(id=>{
-      const r=remote[id], l=map[id];
-      if(r && (!l || (r.mod||0) > (l.mod||0))) map[id]=r;
-    });
-    Object.keys(tomb).forEach(id=>{
-      const p=map[id];
-      if(p && (p.mod||0) <= (tomb[id]||0)) delete map[id];
-    });
-
-    await localClear();
-    for(const id in map) await db.set('planta:'+id, JSON.stringify(map[id]));
-
-    const subir={};
-    for(const id in map){
-      const r=remote[id];
-      if(!r || (map[id].mod||0) > (r.mod||0)) subir[id]=map[id];
-    }
-    if(Object.keys(subir).length) await ref.update(subir);
-    for(const id in tomb){ if(remote[id] && !map[id]) await ref.child(id).remove(); }
-
-    // la clave de Pl@ntNet viaja con la cuenta, para no teclearla en cada aparato
-    const cref = FB.db.ref('config/'+FB.uid+'/pnkey');
-    const rk = (await cref.get()).val() || '';
-    if(CFG.apiKey && !rk) await cref.set(CFG.apiKey);
-    else if(rk && !CFG.apiKey){ CFG.apiKey=rk; await db.set('config:pnkey',rk); }
-
-    fbEstado('Al día · '+Object.keys(map).length+' planta(s) · '+FB.correo);
-    try{ if(!$('view-garden').classList.contains('hide')) renderGarden(); }catch(e){}
-  }catch(e){
-    fbEstado('No se pudo sincronizar: '+(e && e.message ? e.message : 'error'));
-  }
-}
-
-function fbListen(){
-  if(!FB.on) return;
-  FB.db.ref('plantas/'+FB.uid).on('value', async snap=>{
-    const remote = snap.val() || {};
-    let cambios=0;
-    for(const id in remote){
-      const r=remote[id];
-      let l=null;
-      try{ const v=await db.get('planta:'+id); l=v?JSON.parse(v):null; }catch(e){}
-      if(!l || (r.mod||0) > (l.mod||0)){ await db.set('planta:'+id, JSON.stringify(r)); cambios++; }
-    }
-    try{ if(cambios && !$('view-garden').classList.contains('hide')) renderGarden(); }catch(e){}
-  });
-}
-
-async function credLeer(){
-  try{ const v=await db.get('config:cred'); return v?JSON.parse(v):null; }catch(e){ return null; }
-}
-async function fbEntrar(correo, clave){
-  if(!FB.ok && !fbInit()){ fbEstado('No se cargó Firebase. Comprueba la conexión y recarga la página.'); return; }
-  fbEstado('Entrando…');
-  try{
-    await FB.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    await FB.auth.signInWithEmailAndPassword(correo, clave);
-    if(!$('syncKeep') || $('syncKeep').checked) await db.set('config:cred', JSON.stringify({m:correo,p:clave}));
-    else await db.del('config:cred');
-  }catch(e){
-    const c=(e&&e.code)||'';
-    fbEstado(
-      c.indexOf('wrong-password')>=0 || c.indexOf('invalid-credential')>=0 ? 'Correo o contraseña incorrectos.' :
-      c.indexOf('user-not-found')>=0 ? 'Ese correo no está dado de alta en el proyecto.' :
-      c.indexOf('network')>=0 ? 'Sin conexión con Firebase.' :
-      c.indexOf('too-many')>=0 ? 'Demasiados intentos. Espera unos minutos.' :
-      'No se pudo entrar ('+(c||'error')+').');
-  }
-}
-async function fbSalir(){
-  await db.del('config:cred');
-  FB.intento=true;
-  try{ if(FB.on) FB.db.ref('plantas/'+FB.uid).off(); }catch(e){}
-  try{ await FB.auth.signOut(); }catch(e){}
-}
-
-function fbBoot(){
-  if(!fbInit()){ fbEstado('Firebase no disponible: la app guarda solo en este aparato.'); return; }
-  FB.auth.onAuthStateChanged(async u=>{
-    if(u){
-      FB.on=true; FB.uid=u.uid; FB.correo=u.email||'';
-      if($('syncForm')) $('syncForm').classList.add('hide');
-      if($('syncOut')) $('syncOut').classList.remove('hide');
-      await fbSync();
-      fbListen();
-    }else{
-      FB.on=false; FB.uid=null; FB.correo='';
-      if($('syncForm')) $('syncForm').classList.remove('hide');
-      if($('syncOut')) $('syncOut').classList.add('hide');
-      if(!FB.intento){
-        const c=await credLeer();
-        if(c && c.m && c.p){
-          FB.intento=true;
-          if($('syncMail')) $('syncMail').value=c.m;
-          fbEstado('Entrando con tus datos guardados…');
-          fbEntrar(c.m, c.p);
-          return;
-        }
-      }
-      fbEstado('Sin conectar. El jardín se guarda solo en este aparato.');
-    }
-    renderSettings();
-  });
-}
-
-
-/* ============ imagen ============ */
-async function loadBitmap(file){
-  if(window.createImageBitmap){
-    try{ return await createImageBitmap(file,{imageOrientation:'from-image'}); }
-    catch(e){ try{ return await createImageBitmap(file); }catch(e2){} }
-  }
-  return new Promise((res,rej)=>{
-    const img=new Image(), url=URL.createObjectURL(file);
-    img.onload=()=>{URL.revokeObjectURL(url);res(img);};
-    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('No se pudo leer la imagen.'));};
-    img.src=url;
-  });
-}
-async function processImage(file){
-  const bmp = await loadBitmap(file);
-  const draw=(max,q)=>{
-    const w=bmp.width||bmp.naturalWidth, h=bmp.height||bmp.naturalHeight;
-    const s=Math.min(1,max/Math.max(w,h));
-    const c=document.createElement('canvas');
-    c.width=Math.round(w*s); c.height=Math.round(h*s);
-    const ctx=c.getContext('2d');
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
-    ctx.drawImage(bmp,0,0,c.width,c.height);
-    return c.toDataURL('image/jpeg',q);
-  };
-  const full=draw(1100,0.82), thumb=draw(420,0.68);
-  return { full, thumb, b64: full.split(',')[1] };
-}
 
 /* ============ identificación: Pl@ntNet ============ */
 const PN = 'https://my-api.plantnet.org/v2';
@@ -1534,7 +1319,6 @@ function renderSettings(){
   $('keyState').textContent = CFG.apiKey
     ? 'Hay una clave guardada, terminada en '+CFG.apiKey.slice(-4)+'. Pruébala para ver cuántas identificaciones te quedan hoy.'
     : 'No hay ninguna clave guardada. Sin ella funciona todo menos identificar por foto.';
-  if($('syncState')) $('syncState').textContent = FB.estado;
   $('storeInfo').textContent = 'Guardado en: '+
     (BACKEND==='claude'?'almacenamiento de Claude':(BACKEND==='local'?'memoria del teléfono':'solo esta sesión, no se conserva al cerrar'))+'.';
 }
@@ -1543,7 +1327,6 @@ function alterna(inp, btn){
   inp.type = ver ? 'text' : 'password';
   btn.textContent = ver ? 'Ocultar' : 'Ver lo que escribo';
 }
-$('verPass').onclick=()=>alterna($('syncPass'), $('verPass'));
 $('verKey').onclick=()=>alterna($('apiKey'), $('verKey'));
 $('keyShow').onclick=()=>{
   if(!CFG.apiKey){ $('keyMsg').innerHTML=errBox('Todavía no hay ninguna clave guardada.'); return; }
@@ -1554,10 +1337,6 @@ $('keyShow').onclick=()=>{
     $('keyMsg').innerHTML='<div class="card pad" style="margin-top:10px;word-break:break-all"><b>Clave guardada</b><br>'+esc(CFG.apiKey)+'</div>';
   }
 };
-$('syncIn').onclick=()=>fbEntrar(($('syncMail').value||'').trim(), $('syncPass').value);
-$('syncPass').onkeydown=e=>{ if(e.key==='Enter') $('syncIn').click(); };
-$('syncNow').onclick=()=>fbSync();
-$('syncLogout').onclick=()=>fbSalir();
 $('keyTest').onclick=async()=>{
   if(!CFG.apiKey){ $('keyMsg').innerHTML=errBox('Guarda primero una clave.'); return; }
   $('keyMsg').innerHTML=loading('Preguntando a Pl@ntNet…');
@@ -1614,7 +1393,7 @@ $('bkFile').onchange=async e=>{
     if(!Array.isArray(list)||!list.length) throw new Error('vacio');
     let n=0;
     for(const p of list){ if(p&&p.id){ p.mod=Date.now(); await store.save(p); n++; } }
-    $('bkMsg').innerHTML=okBox(n+' planta(s) restauradas'+(FB.on?' y subidas a tu Firebase.':' en este aparato.'));
+    $('bkMsg').innerHTML=okBox(n+' planta(s) restauradas'+' en este aparato.');
     jardin=await store.all();
   }catch(err){ $('bkMsg').innerHTML=errBox('Ese archivo no parece una copia de Herbario. Tiene que ser el .json que descargaste desde aquí.'); }
 };
@@ -1624,7 +1403,6 @@ $('bkFile').onchange=async e=>{
   await cfgLoad();
   renderChips();
   renderSettings();
-  fbBoot();
 })();
 </script>
 </body>
