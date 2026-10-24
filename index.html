@@ -98,6 +98,14 @@
     padding:6px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
   nav button[aria-current="true"]{color:var(--green);font-weight:700}
   nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.mcal{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin:6px 0 12px}
+  .mcal div{text-align:center;font-size:10px;padding:6px 0;border-radius:5px;background:var(--dot-off);color:var(--muted)}
+  .mcal div.a{background:#d8e8dc;color:#1d4a2d}
+  .mcal div.b{background:#2e6b41;color:#fff}
+  .mcal div.c{background:#9cc4a8;color:#163a22}
+  .mcal div.d{background:#e0a33f;color:#3a2600}
+  .leg{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;background:var(--dot-off)}
+  .leg.a{background:#d8e8dc}.leg.b{background:#2e6b41}.leg.c{background:#9cc4a8}.leg.d{background:#e0a33f}
   .loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:15px;padding:22px 4px}
   .spin{width:16px;height:16px;border:2px solid var(--dot-off);border-top-color:var(--green);border-radius:50%;animation:sp .8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
@@ -167,6 +175,14 @@
   </section>
 
   <!-- DIAGNÓSTICO -->
+  <section id="view-huerta" class="hide">
+    <h2>Calendario de huerta</h2>
+    <p class="lead">Qué sembrar, qué trasplantar y qué recoger cada mes. Son fechas orientativas: manda siempre el tiempo que haga.</p>
+    <div class="chips" id="huZona"></div>
+    <div class="chips" id="huMes"></div>
+    <div id="huOut"></div>
+  </section>
+
   <section id="view-diag" class="hide">
     <h2>¿Qué le pasa?</h2>
     <p class="lead">Marca lo que estás viendo. La app cruza las señales con su guía de problemas, sin necesidad de internet.</p>
@@ -261,6 +277,10 @@
   <button data-view="garden">
     <svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M12 13c-3 0-5-2-5-5 3 0 5 2 5 5Z"/><path d="M12 13c3 0 5-2 5-5-3 0-5 2-5 5Z"/><path d="M3 21h18"/></svg>
     Mi jardín
+  </button>
+  <button data-view="huerta">
+    <svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 20v-5"/><path d="M12 20V9"/><path d="M18 20v-8"/><path d="M6 15c-1.7 0-3-1.3-3-3 1.7 0 3 1.3 3 3Z"/><path d="M12 9c-2 0-3.5-1.5-3.5-3.5C10.5 5.5 12 7 12 9Z"/><path d="M12 9c2 0 3.5-1.5 3.5-3.5C13.5 5.5 12 7 12 9Z"/><path d="M18 12c-1.7 0-3-1.3-3-3 1.7 0 3 1.3 3 3Z"/></svg>
+    Huerta
   </button>
   <button data-view="diag">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M11 8v4"/><path d="M11 14.5v.5"/></svg>
@@ -919,7 +939,7 @@ function diagHTML(d, img){
 }
 
 /* ============ navegación ============ */
-const views={id:'view-id',garden:'view-garden',diag:'view-diag',detail:'view-detail',set:'view-set'};
+const views={id:'view-id',garden:'view-garden',huerta:'view-huerta',diag:'view-diag',detail:'view-detail',set:'view-set'};
 function show(v){
   Object.values(views).forEach(id=>$(id).classList.add('hide'));
   $(views[v]).classList.remove('hide');
@@ -929,6 +949,7 @@ function show(v){
   });
   window.scrollTo(0,0);
   if(v==='garden') renderGarden();
+  if(v==='huerta') renderHuerta();
   if(v==='diag') renderChips();
   if(v==='set') renderSettings();
 }
@@ -1229,6 +1250,326 @@ function openDetail(id){
 }
 $('detBack').onclick=()=>show('garden');
 
+/* ============ huerta: calendario de siembra ============ */
+/* meses de 1 a 12. sem: semillero · dir: siembra directa · tra: trasplante · cos: cosecha
+   Fechas pensadas para zona templada de costa; la zona fría las corrige sola. */
+const CULTIVOS = [
+ {n:'Tomate', c:'Solanum lycopersicum', sem:[2,3,4], dir:[], tra:[4,5], cos:[7,8,9,10], sol:3, agua:3,
+  marco:'50 cm entre plantas y 80 entre líneas', prof:'0,5 cm', dias:'70 a 90 días desde el trasplante',
+  con:['albahaca','caléndula','zanahoria','perejil'], evi:['patata','berenjena','hinojo'],
+  tip:'Entutora desde el principio y riega al pie: la hoja mojada de noche trae el mildiu.'},
+ {n:'Pimiento', c:'Capsicum annuum', sem:[2,3], dir:[], tra:[5], cos:[7,8,9,10], sol:3, agua:2,
+  marco:'40 cm entre plantas y 60 entre líneas', prof:'0,5 cm', dias:'80 a 100 días desde el trasplante',
+  con:['albahaca','zanahoria','cebolla'], evi:['hinojo'],
+  tip:'Necesita calor de verdad: trasplantado antes de tiempo se queda parado semanas.'},
+ {n:'Pimiento de Padrón', c:'Capsicum annuum', sem:[2,3], dir:[], tra:[5], cos:[7,8,9], sol:3, agua:2,
+  marco:'40 × 60 cm', prof:'0,5 cm', dias:'75 días desde el trasplante',
+  con:['albahaca','cebolla'], evi:['hinojo'],
+  tip:'Recógelos pequeños, de 4 o 5 cm: cuanto más grandes, más pican.'},
+ {n:'Berenjena', c:'Solanum melongena', sem:[2,3], dir:[], tra:[5], cos:[7,8,9], sol:3, agua:3,
+  marco:'50 × 70 cm', prof:'0,5 cm', dias:'90 a 110 días desde el trasplante',
+  con:['judía','caléndula'], evi:['patata','tomate'],
+  tip:'Es la más friolera de todas: no la saques hasta que las noches pasen de 12 grados.'},
+ {n:'Calabacín', c:'Cucurbita pepo', sem:[3,4], dir:[4,5,6], tra:[5,6], cos:[6,7,8,9], sol:3, agua:3,
+  marco:'80 cm entre plantas y 1 m entre líneas', prof:'2 cm', dias:'50 a 60 días',
+  con:['judía','maíz','caléndula'], evi:['pepino','calabaza al lado'],
+  tip:'Recoge cada dos días: uno que se te escape frena la producción de los siguientes.'},
+ {n:'Pepino', c:'Cucumis sativus', sem:[3,4], dir:[5], tra:[5,6], cos:[7,8,9], sol:3, agua:3,
+  marco:'40 cm en línea, con emparrado', prof:'2 cm', dias:'55 a 70 días',
+  con:['maíz','judía','lechuga'], evi:['patata'],
+  tip:'En vertical ocupa un tercio y se moja mucho menos la hoja.'},
+ {n:'Calabaza', c:'Cucurbita maxima', sem:[4], dir:[5], tra:[5,6], cos:[9,10], sol:3, agua:2,
+  marco:'1 m entre plantas y 1,5 entre líneas', prof:'3 cm', dias:'110 a 140 días',
+  con:['maíz','judía'], evi:['patata'],
+  tip:'Córtalas con un trozo de rabo y cúralas al sol una semana: así aguantan todo el invierno.'},
+ {n:'Melón', c:'Cucumis melo', sem:[3,4], dir:[], tra:[5], cos:[8,9], sol:3, agua:2,
+  marco:'1 m entre plantas', prof:'2 cm', dias:'100 a 120 días',
+  con:['maíz','girasol'], evi:['pepino'],
+  tip:'Corta el riego cuando empiece a oler: lo que queda de agua le quita azúcar.'},
+ {n:'Sandía', c:'Citrullus lanatus', sem:[3,4], dir:[], tra:[5], cos:[8,9], sol:3, agua:2,
+  marco:'1,5 m entre plantas', prof:'2 cm', dias:'100 a 130 días',
+  con:['maíz'], evi:['pepino'],
+  tip:'Está lista cuando el zarcillo más cercano al fruto se ha secado del todo.'},
+ {n:'Judía verde', c:'Phaseolus vulgaris', sem:[], dir:[4,5,6,7], tra:[], cos:[6,7,8,9,10], sol:3, agua:2,
+  marco:'10 cm en línea, 60 entre líneas', prof:'3 cm', dias:'55 días la mata baja, 70 la de enrame',
+  con:['maíz','calabacín','fresa'], evi:['ajo','cebolla','puerro'],
+  tip:'Siembra un puñado cada tres semanas y tendrás judías hasta octubre.'},
+ {n:'Judía seca', c:'Phaseolus vulgaris', sem:[], dir:[5,6], tra:[], cos:[9,10], sol:3, agua:2,
+  marco:'15 × 60 cm', prof:'3 cm', dias:'100 a 120 días',
+  con:['maíz','calabaza'], evi:['ajo','cebolla'],
+  tip:'Déjalas secar en la mata y arráncalas enteras cuando suenen al moverlas.'},
+ {n:'Haba', c:'Vicia faba', sem:[], dir:[10,11,12,1], tra:[], cos:[3,4,5], sol:3, agua:2,
+  marco:'20 cm en línea, 50 entre líneas', prof:'5 cm', dias:'150 a 180 días',
+  con:['patata','lechuga','espinaca'], evi:['ajo','cebolla'],
+  tip:'Despunta la planta cuando empiece a cuajar: te libras de casi todo el pulgón negro.'},
+ {n:'Guisante', c:'Pisum sativum', sem:[], dir:[10,11,2,3], tra:[], cos:[4,5,6], sol:3, agua:2,
+  marco:'5 cm en línea, 60 entre líneas', prof:'4 cm', dias:'90 a 110 días',
+  con:['zanahoria','rábano','lechuga'], evi:['ajo','cebolla'],
+  tip:'Ponle el emparrado el día que siembras; después es un lío.'},
+ {n:'Lechuga', c:'Lactuca sativa', sem:[1,2,3,4,5,6,7,8,9], dir:[3,4,5,8,9], tra:[2,3,4,5,6,7,8,9,10], cos:[4,5,6,7,8,9,10,11], sol:2, agua:3,
+  marco:'25 × 30 cm', prof:'0,5 cm', dias:'50 a 70 días',
+  con:['zanahoria','rábano','fresa','pepino'], evi:['perejil'],
+  tip:'En pleno verano siémbrala a media sombra o se te espiga en nada.'},
+ {n:'Escarola', c:'Cichorium endivia', sem:[6,7,8], dir:[], tra:[7,8,9], cos:[10,11,12], sol:2, agua:2,
+  marco:'30 × 35 cm', prof:'0,5 cm', dias:'90 días',
+  con:['zanahoria','puerro'], evi:[],
+  tip:'Átala por arriba dos semanas antes de cortarla y el cogollo sale blanco y dulce.'},
+ {n:'Espinaca', c:'Spinacia oleracea', sem:[], dir:[2,3,8,9,10], tra:[], cos:[4,5,10,11,12], sol:2, agua:3,
+  marco:'10 × 25 cm', prof:'2 cm', dias:'45 a 60 días',
+  con:['fresa','rábano','col'], evi:[],
+  tip:'Es de frío: sembrada en mayo se va directa a flor sin darte una hoja.'},
+ {n:'Acelga', c:'Beta vulgaris', sem:[2,3,8], dir:[3,4,8,9], tra:[4,5,9], cos:[5,6,7,8,9,10,11,12], sol:2, agua:3,
+  marco:'30 × 40 cm', prof:'2 cm', dias:'60 días y luego corta y sigue',
+  con:['cebolla','zanahoria'], evi:['espinaca'],
+  tip:'Corta siempre las hojas de fuera y la planta te dura más de un año.'},
+ {n:'Rúcula', c:'Eruca vesicaria', sem:[], dir:[3,4,5,8,9], tra:[], cos:[5,6,7,10,11], sol:2, agua:2,
+  marco:'10 × 20 cm', prof:'1 cm', dias:'35 a 45 días',
+  con:['lechuga','zanahoria'], evi:[],
+  tip:'Cuanto más calor pase, más pica. La de otoño es la más suave.'},
+ {n:'Canónigo', c:'Valerianella locusta', sem:[], dir:[8,9,10], tra:[], cos:[11,12,1,2], sol:2, agua:2,
+  marco:'10 × 15 cm', prof:'1 cm', dias:'60 días',
+  con:['fresa','espinaca'], evi:[],
+  tip:'Aguanta heladas sin inmutarse: es la ensalada del invierno.'},
+ {n:'Repollo', c:'Brassica oleracea', sem:[3,4,7,8], dir:[], tra:[5,6,9], cos:[7,8,11,12,1], sol:3, agua:2,
+  marco:'45 × 50 cm', prof:'1 cm', dias:'90 a 120 días',
+  con:['apio','romero','remolacha'], evi:['fresa','tomate'],
+  tip:'Revisa el envés cada semana en verano: la oruga de la col se te come una planta en días.'},
+ {n:'Brócoli', c:'Brassica oleracea', sem:[5,6,7], dir:[], tra:[7,8], cos:[10,11,12,1], sol:3, agua:2,
+  marco:'45 × 60 cm', prof:'1 cm', dias:'100 a 130 días',
+  con:['apio','remolacha'], evi:['tomate','fresa'],
+  tip:'Tras cortar la pella central siguen saliendo brotes laterales durante semanas.'},
+ {n:'Coliflor', c:'Brassica oleracea', sem:[5,6,7], dir:[], tra:[7,8], cos:[11,12,1,2], sol:3, agua:3,
+  marco:'50 × 60 cm', prof:'1 cm', dias:'120 a 150 días',
+  con:['apio','acelga'], evi:['tomate','fresa'],
+  tip:'Dobla un par de hojas sobre la pella para que no amarillee con el sol.'},
+ {n:'Lombarda', c:'Brassica oleracea', sem:[5,6], dir:[], tra:[7], cos:[11,12], sol:3, agua:2,
+  marco:'45 × 55 cm', prof:'1 cm', dias:'120 días',
+  con:['apio','remolacha'], evi:['fresa'],
+  tip:'Mejora mucho después de la primera helada.'},
+ {n:'Berza', c:'Brassica oleracea', sem:[5,6,7], dir:[], tra:[7,8], cos:[10,11,12,1,2], sol:3, agua:2,
+  marco:'50 × 60 cm', prof:'1 cm', dias:'90 días y sigue dando',
+  con:['apio','remolacha'], evi:['fresa'],
+  tip:'Ve cogiendo hojas de abajo sin arrancarla: da todo el invierno.'},
+ {n:'Coles de Bruselas', c:'Brassica oleracea', sem:[4,5], dir:[], tra:[6,7], cos:[11,12,1], sol:3, agua:2,
+  marco:'50 × 70 cm', prof:'1 cm', dias:'150 a 180 días',
+  con:['apio','patata'], evi:['fresa','tomate'],
+  tip:'Despunta la guía en octubre y los repollitos engordan todos a la vez.'},
+ {n:'Nabo', c:'Brassica rapa', sem:[], dir:[8,9], tra:[], cos:[10,11,12], sol:3, agua:2,
+  marco:'10 × 30 cm', prof:'1,5 cm', dias:'60 a 80 días',
+  con:['guisante','lechuga'], evi:['patata'],
+  tip:'Recógelos del tamaño de una pelota de golf; más grandes se hacen fibrosos.'},
+ {n:'Rábano', c:'Raphanus sativus', sem:[], dir:[3,4,5,6,7,8,9], tra:[], cos:[4,5,6,7,8,9,10], sol:2, agua:3,
+  marco:'5 × 20 cm', prof:'1 cm', dias:'25 a 35 días',
+  con:['zanahoria','lechuga','pepino'], evi:[],
+  tip:'Lo más rápido de la huerta: perfecto para rellenar los huecos entre cultivos lentos.'},
+ {n:'Zanahoria', c:'Daucus carota', sem:[], dir:[3,4,5,6,7,8], tra:[], cos:[6,7,8,9,10,11], sol:3, agua:2,
+  marco:'5 cm en línea, 30 entre líneas', prof:'1 cm', dias:'90 a 120 días',
+  con:['cebolla','puerro','rábano','lechuga'], evi:['eneldo'],
+  tip:'La cebolla al lado despista a la mosca de la zanahoria.'},
+ {n:'Remolacha', c:'Beta vulgaris', sem:[], dir:[3,4,5,6,7], tra:[], cos:[6,7,8,9,10], sol:3, agua:2,
+  marco:'10 × 30 cm', prof:'2 cm', dias:'80 a 100 días',
+  con:['cebolla','col','lechuga'], evi:['judía'],
+  tip:'Cada semilla saca varias plantas: aclara pronto o salen todas enanas.'},
+ {n:'Chirivía', c:'Pastinaca sativa', sem:[], dir:[3,4,5], tra:[], cos:[10,11,12], sol:3, agua:2,
+  marco:'10 × 35 cm', prof:'1,5 cm', dias:'150 a 180 días',
+  con:['rábano','lechuga'], evi:['zanahoria'],
+  tip:'Déjala en tierra hasta las primeras heladas: el frío la vuelve dulce.'},
+ {n:'Puerro', c:'Allium porrum', sem:[2,3,4], dir:[], tra:[5,6,7], cos:[9,10,11,12,1], sol:3, agua:2,
+  marco:'12 × 35 cm', prof:'1 cm', dias:'150 a 180 días',
+  con:['zanahoria','apio','fresa'], evi:['judía','guisante'],
+  tip:'Plántalo en un agujero hondo y ve arrimando tierra: así sale más blanco.'},
+ {n:'Cebolla', c:'Allium cepa', sem:[1,2,8,9], dir:[], tra:[3,4,10], cos:[6,7,8], sol:3, agua:2,
+  marco:'12 × 30 cm', prof:'1 cm', dias:'150 a 180 días',
+  con:['zanahoria','remolacha','fresa'], evi:['judía','guisante'],
+  tip:'Cuando se doble el tallo solo, deja de regar y arráncalas una semana después.'},
+ {n:'Cebolleta', c:'Allium fistulosum', sem:[], dir:[9,10,2,3], tra:[9,10], cos:[3,4,5,6], sol:3, agua:2,
+  marco:'5 × 25 cm', prof:'1 cm', dias:'90 días',
+  con:['zanahoria','lechuga'], evi:['judía'],
+  tip:'Se puede ir cogiendo según hace falta, sin esperar a que esté toda.'},
+ {n:'Ajo', c:'Allium sativum', sem:[], dir:[10,11,12,1], tra:[], cos:[6,7], sol:3, agua:1,
+  marco:'10 × 30 cm', prof:'4 cm, con la punta hacia arriba', dias:'210 días',
+  con:['fresa','zanahoria','tomate'], evi:['judía','guisante'],
+  tip:'Dicho de siempre: sembrar en luna vieja de otoño y recoger con hoja seca en junio.'},
+ {n:'Patata', c:'Solanum tuberosum', sem:[], dir:[2,3,4], tra:[], cos:[6,7,8,9], sol:3, agua:2,
+  marco:'30 cm en línea, 70 entre líneas', prof:'10 cm', dias:'90 a 120 días',
+  con:['haba','maíz','col'], evi:['tomate','calabaza','girasol'],
+  tip:'Aporca cuando levante un palmo: lo que queda al aire se pone verde y no se come.'},
+ {n:'Boniato', c:'Ipomoea batatas', sem:[], dir:[], tra:[5,6], cos:[10,11], sol:3, agua:2,
+  marco:'35 cm en línea, 80 entre líneas', prof:'esqueje enterrado medio palmo', dias:'120 a 150 días',
+  con:['judía'], evi:['calabaza'],
+  tip:'Arráncalo antes de la primera helada y déjalo curar dos semanas en sitio cálido.'},
+ {n:'Maíz dulce', c:'Zea mays', sem:[], dir:[4,5,6], tra:[], cos:[8,9], sol:3, agua:3,
+  marco:'25 cm en línea, 70 entre líneas', prof:'3 cm', dias:'90 a 110 días',
+  con:['judía','calabaza','calabacín'], evi:['tomate'],
+  tip:'Siémbralo en bloque cuadrado, no en una fila larga: se poliniza con el viento.'},
+ {n:'Apio', c:'Apium graveolens', sem:[3,4], dir:[], tra:[5,6], cos:[9,10,11], sol:2, agua:3,
+  marco:'30 × 40 cm', prof:'0,5 cm', dias:'140 días',
+  con:['col','puerro','tomate'], evi:['maíz'],
+  tip:'Es el más sediento de la huerta: en cuanto le falta agua se pone amargo y fibroso.'},
+ {n:'Alcachofa', c:'Cynara scolymus', sem:[], dir:[], tra:[8,9,3], cos:[2,3,4,5], sol:3, agua:2,
+  marco:'80 cm × 1 m', prof:'hijuelo enterrado hasta el cuello', dias:'da desde el segundo año',
+  con:['haba','guisante'], evi:[],
+  tip:'Cada otoño separa los hijuelos de la mata vieja y replántalos: así no se agota.'},
+ {n:'Espárrago', c:'Asparagus officinalis', sem:[], dir:[], tra:[2,3], cos:[4,5], sol:3, agua:2,
+  marco:'40 cm en línea, 1,5 m entre líneas', prof:'garras a 20 cm', dias:'primera cosecha al tercer año',
+  con:['tomate','perejil'], evi:['ajo','cebolla'],
+  tip:'Es para toda la vida: la esparraguera bien puesta da veinte años.'},
+ {n:'Fresa', c:'Fragaria × ananassa', sem:[], dir:[], tra:[9,10,2,3], cos:[5,6,7], sol:3, agua:3,
+  marco:'30 × 40 cm', prof:'sin enterrar la corona', dias:'da de la primavera siguiente',
+  con:['ajo','lechuga','espinaca','borraja'], evi:['col','brócoli'],
+  tip:'Pon paja debajo: la fruta no toca tierra y se pudre mucho menos.'},
+ {n:'Perejil', c:'Petroselinum crispum', sem:[3,4], dir:[3,4,5,8,9], tra:[5], cos:[5,6,7,8,9,10,11], sol:2, agua:2,
+  marco:'20 × 25 cm', prof:'1 cm', dias:'80 días, y luego todo el año',
+  con:['tomate','zanahoria','espárrago'], evi:['lechuga'],
+  tip:'Tarda tres semanas en nacer: ponlo a remojo la noche antes y no desesperes.'},
+ {n:'Albahaca', c:'Ocimum basilicum', sem:[3,4], dir:[5], tra:[5,6], cos:[6,7,8,9], sol:3, agua:3,
+  marco:'25 × 30 cm', prof:'0,5 cm', dias:'60 días',
+  con:['tomate','pimiento'], evi:['ruda'],
+  tip:'Córtale la espiga de flor en cuanto asome o se acaba la hoja.'},
+ {n:'Cilantro', c:'Coriandrum sativum', sem:[], dir:[3,4,8,9], tra:[], cos:[5,6,10,11], sol:2, agua:2,
+  marco:'15 × 25 cm', prof:'1 cm', dias:'45 a 60 días',
+  con:['espinaca','rábano'], evi:['hinojo'],
+  tip:'Con calor se espiga enseguida: el bueno es el de otoño.'},
+ {n:'Borraja', c:'Borago officinalis', sem:[], dir:[3,4,8,9], tra:[], cos:[5,6,11,12], sol:3, agua:2,
+  marco:'30 × 40 cm', prof:'2 cm', dias:'70 días',
+  con:['fresa','calabacín','tomate'], evi:[],
+  tip:'Sus flores azules traen abejorros a toda la huerta; déjala florecer en una esquina.'},
+ {n:'Cardo', c:'Cynara cardunculus', sem:[], dir:[6,7], tra:[], cos:[11,12,1], sol:3, agua:2,
+  marco:'80 cm × 1 m', prof:'2 cm', dias:'150 días',
+  con:['haba'], evi:[],
+  tip:'Átalo y tápalo con cartón un mes antes de cortarlo para que blanquee.'},
+ {n:'Hinojo de bulbo', c:'Foeniculum vulgare', sem:[6,7], dir:[7], tra:[7,8], cos:[10,11], sol:3, agua:2,
+  marco:'25 × 40 cm', prof:'1 cm', dias:'90 a 110 días',
+  con:[], evi:['tomate','judía','pimiento'],
+  tip:'Ponlo apartado del resto: no se lleva bien con casi nada.'},
+ {n:'Calabaza de invierno', c:'Cucurbita moschata', sem:[4], dir:[5], tra:[5,6], cos:[9,10], sol:3, agua:2,
+  marco:'1,2 m entre plantas', prof:'3 cm', dias:'120 a 150 días',
+  con:['maíz','judía'], evi:['patata'],
+  tip:'Cuanto más tarde la recojas, mejor se conserva. Siempre antes de las heladas.'}
+];
+
+const MES = ['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MINI = ['','E','F','M','A','M','J','J','A','S','O','N','D'];
+let huZona='templada', huMes=(new Date()).getMonth()+1, huSel=null;
+
+function ajustaMeses(ms, tipo){
+  if(huZona!=='fria' || !ms.length) return ms.slice();
+  const out = ms.map(m=>{
+    if(tipo==='cos') return (m>=4 && m<=8) ? m+1 : m;      // la cosecha de primavera y verano se retrasa
+    if(m>=2 && m<=6) return m+1;                            // las siembras de primavera, también
+    return m;
+  }).filter(m=>m>=1&&m<=12);
+  return out.filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b);
+}
+const cultivoMes = (c,tipo,m) => ajustaMeses(c[tipo],tipo).indexOf(m)>=0;
+
+async function zonaLoad(){ huZona = (await db.get('config:zona')) || 'templada'; }
+
+function renderHuerta(){
+  $('huZona').innerHTML =
+    '<button class="chip" data-z="templada" aria-pressed="'+(huZona==='templada')+'">Costa templada</button>'+
+    '<button class="chip" data-z="fria" aria-pressed="'+(huZona==='fria')+'">Interior frío</button>';
+  $('huZona').querySelectorAll('.chip').forEach(b=>b.onclick=async()=>{
+    huZona=b.dataset.z; await db.set('config:zona',huZona); renderHuerta();
+  });
+  $('huMes').innerHTML = MES.slice(1).map((m,i)=>
+    '<button class="chip" data-m="'+(i+1)+'" aria-pressed="'+(huMes===i+1)+'">'+m.charAt(0).toUpperCase()+m.slice(1,3)+'</button>').join('')+
+    '<button class="chip" data-m="0" aria-pressed="'+(huMes===0)+'">Todos</button>';
+  $('huMes').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ huMes=parseInt(b.dataset.m); huSel=null; renderHuerta(); });
+  if(huSel) pintaCultivo(); else pintaMes();
+}
+
+function pintaMes(){
+  if(huMes===0){
+    $('huOut').innerHTML='<div class="sec-title">Todos los cultivos</div>'+
+      CULTIVOS.slice().sort((a,b)=>a.n.localeCompare(b.n,'es')).map(c=>botonCultivo(c,'')).join('');
+    enlazaCultivos();
+    return;
+  }
+  const grupos=[
+    ['sem','Sembrar en semillero','protegido, para trasplantar luego'],
+    ['dir','Sembrar directo en la tierra',''],
+    ['tra','Trasplantar al huerto',''],
+    ['cos','Recoger','']
+  ];
+  let html='';
+  grupos.forEach(g=>{
+    const list=CULTIVOS.filter(c=>cultivoMes(c,g[0],huMes));
+    if(!list.length) return;
+    html+='<div class="sec-title">'+g[1]+' <span style="font-weight:400;color:var(--muted)">('+list.length+')</span></div>';
+    if(g[2]) html+='<p class="note" style="margin-top:0">'+g[2]+'</p>';
+    html+=list.map(c=>botonCultivo(c,g[0])).join('');
+  });
+  if(!html) html='<p class="note">En '+MES[huMes]+' no hay nada que sembrar ni recoger de esta lista. Buen mes para abonar, preparar bancales y revisar herramientas.</p>';
+  $('huOut').innerHTML='<div class="sec-title" style="margin-top:6px">'+MES[huMes].charAt(0).toUpperCase()+MES[huMes].slice(1)+
+    ' · '+(huZona==='fria'?'interior frío':'costa templada')+'</div>'+html+
+    (huZona==='fria'?'<p class="note">En interior frío las siembras de primavera van un mes más tarde y la cosecha de verano llega un mes después. Las siembras de otoño conviene adelantarlas unas semanas sobre lo que ves aquí, para que agarren antes de las heladas.</p>':'');
+  enlazaCultivos();
+}
+function botonCultivo(c,tipo){
+  const extra = tipo==='cos' ? c.dias : (tipo? 'a '+c.prof : '');
+  return '<button class="plant" data-c="'+esc(c.n)+'"><span>'+
+    '<span class="pn">'+esc(c.n)+'</span><br>'+
+    '<span class="ps">'+esc(c.c)+'</span>'+
+    (extra?'<span class="pl">'+esc(extra)+'</span>':'')+
+    '</span></button>';
+}
+function enlazaCultivos(){
+  $('huOut').querySelectorAll('.plant').forEach(b=>b.onclick=()=>{
+    huSel=CULTIVOS.find(x=>x.n===b.dataset.c)||null;
+    pintaCultivo(); window.scrollTo(0,0);
+  });
+}
+function barraMeses(c){
+  const fila=(tipos)=>'<div class="mcal">'+MINI.slice(1).map((l,i)=>{
+    const m=i+1;
+    let cls='';
+    tipos.forEach(t=>{ if(cultivoMes(c,t[0],m)) cls=t[1]; });
+    return '<div class="'+cls+'">'+l+'</div>';
+  }).join('')+'</div>';
+  return '<p class="note" style="margin-bottom:0">Sembrar y plantar</p>'+
+         fila([['sem','a'],['tra','c'],['dir','b']])+
+         '<p class="note" style="margin-bottom:0">Recoger</p>'+
+         fila([['cos','d']])+
+         '<p class="note"><span class="leg a"></span> semillero · <span class="leg b"></span> siembra directa · '+
+         '<span class="leg c"></span> trasplante · <span class="leg d"></span> cosecha</p>';
+}
+function pintaCultivo(){
+  const c=huSel;
+  const lista=(a)=>a&&a.length?a.join(', '):'—';
+  $('huOut').innerHTML=
+    '<div class="row" style="margin-top:6px"><button class="btn quiet" id="huBack">Volver</button></div>'+
+    '<div class="card pad">'+
+      '<h3 style="margin:0">'+esc(c.n)+'</h3>'+
+      '<p class="ps" style="margin:2px 0 0">'+esc(c.c)+'</p>'+
+      barraMeses(c)+
+      '<div class="sec-title">Cómo se pone</div>'+
+      '<p style="margin:0;font-size:15px">Marco: '+esc(c.marco)+'<br>Profundidad: '+esc(c.prof)+'<br>Tiempo: '+esc(c.dias)+'</p>'+
+      '<div class="sec-title">Sol y agua</div>'+
+      '<p style="margin:0;font-size:15px">'+LUZ[lvl(c.sol)]+' · riego '+RIEGO[lvl(c.agua)].toLowerCase()+'</p>'+
+      '<div class="sec-title">Al lado va bien con</div>'+
+      '<p style="margin:0;font-size:15px">'+esc(lista(c.con))+'</p>'+
+      '<div class="sec-title">Mejor lejos de</div>'+
+      '<p style="margin:0;font-size:15px">'+esc(lista(c.evi))+'</p>'+
+      '<div class="sec-title">Consejo</div>'+
+      '<p style="margin:0;font-size:15px">'+esc(c.tip)+'</p>'+
+      '<div class="row"><button class="btn" id="huAdd">Añadir a mi jardín</button></div>'+
+      '<div id="huMsg" class="note"></div>'+
+    '</div>';
+  $('huBack').onclick=()=>{ huSel=null; renderHuerta(); };
+  $('huAdd').onclick=async()=>{
+    $('huAdd').disabled=true;
+    const f=fichaManual(c.n, c.c, 'hortaliza', 0);
+    f.descripcion='Del calendario de huerta. '+c.marco+'. '+c.dias+'.';
+    f.consejo=c.tip;
+    f.escalas={luz:lvl(c.sol), riego:lvl(c.agua), humedad:2};
+    const planta={ id:'p'+Date.now()+Math.floor(Math.random()*1000), creada:Date.now(),
+      ubicacion:'Huerta', foto:'', ficha:f, historial:[], notas:'', ultimoRiego:null, intervaloRiego:null };
+    try{ await store.save(planta); $('huMsg').textContent='Añadida a tu jardín.'; $('huAdd').textContent='Añadida'; }
+    catch(e){ $('huMsg').textContent='No se pudo guardar.'; $('huAdd').disabled=false; }
+  };
+}
+
 /* ============ diagnóstico ============ */
 let diagPlantId=null, dgSel=[], dgCtx={donde:'', riego:''}, dgRes=null;
 
@@ -1401,6 +1742,7 @@ $('bkFile').onchange=async e=>{
 /* ============ arranque ============ */
 (async function init(){
   await cfgLoad();
+  await zonaLoad();
   renderChips();
   renderSettings();
 })();
