@@ -164,6 +164,7 @@
     <div class="row" style="margin-top:0"><button class="btn ghost" id="addManBtn">Añadir planta a mano</button></div>
     <input type="file" accept="image/*" id="manFile" class="hide">
     <div id="addManBox" class="hide"></div>
+    <div id="gardenFile"></div>
     <div id="gardenDue"></div>
     <div id="gardenList"></div>
   </section>
@@ -233,7 +234,7 @@
     <div class="sec-title">Identificación por foto</div>
 
     <div class="card pad">
-      <p class="note" style="margin-top:0">Es el código largo que te da my.plantnet.org al registrarte, del estilo <b>2b10AbCd...</b>. No es una contraseña tuya. Solo sirve para identificar plantas por foto: el jardín y el diagnóstico funcionan sin ella.</p>
+      <p class="note" style="margin-top:0">Tu clave ya viene dentro de la app, no hay que escribir nada. Esta casilla solo hace falta el día que la cambies en my.plantnet.org.</p>
       <label class="fld" for="apiKey">Clave de Pl@ntNet</label>
       <input class="text" id="apiKey" type="password" placeholder="2b10..." autocomplete="off">
       <div class="row"><button class="btn" id="keySave">Guardar clave</button>
@@ -243,6 +244,14 @@
       <button class="btn quiet" id="keyClear">Borrar clave</button></div>
       <p class="note" id="keyState"></p>
       <div id="keyMsg"></div>
+    </div>
+
+    <div class="sec-title">Dónde se guarda el jardín</div>
+    <div class="card pad">
+      <p class="note" style="margin-top:0">Lo normal es que el jardín viva en la memoria del navegador, y eso se borra si el móvil hace limpieza. Si eliges un archivo tuyo, la app escribe en él cada cambio y tus plantas dejan de depender del navegador.</p>
+      <p class="note" id="fileState"></p>
+      <div id="fileBtns"></div>
+      <div id="fileMsg"></div>
     </div>
 
     <div class="sec-title">Copia de seguridad</div>
@@ -331,6 +340,7 @@ const store = {
     p.mod = Date.now();
     const limpio = JSON.parse(JSON.stringify(p));
     await db.set('planta:'+p.id, JSON.stringify(limpio));
+    if(typeof archivoGuardar==='function') await archivoGuardar();
   },
   async all(){
     const out=[];
@@ -341,12 +351,14 @@ const store = {
   },
   async remove(id){
     await db.del('planta:'+id);
+    if(typeof archivoGuardar==='function') await archivoGuardar();
   }
 };
 
 /* ============ configuración ============ */
+const PNKEY_FIJA = '2b10p0Igd9UvHR4KAktUdu6kKO';   // clave de Pl@ntNet de Fer, limitada a su dominio
 const CFG = { apiKey:'' };
-async function cfgLoad(){ CFG.apiKey = (await db.get('config:pnkey')) || ''; }
+async function cfgLoad(){ CFG.apiKey = (await db.get('config:pnkey')) || PNKEY_FIJA; }
 
 /* ============ identificación: Pl@ntNet ============ */
 const PN = 'https://my-api.plantnet.org/v2';
@@ -1167,6 +1179,7 @@ $('addManBtn').onclick=()=>{ if($('addManBox').classList.contains('hide')) abreM
 /* ============ jardín ============ */
 let jardin=[];
 async function renderGarden(){
+  avisoArchivo();
   $('gardenList').innerHTML=loading('Abriendo el jardín…');
   $('gardenDue').innerHTML='';
   jardin=await store.all();
@@ -1249,6 +1262,133 @@ function openDetail(id){
   show('detail');
 }
 $('detBack').onclick=()=>show('garden');
+
+/* ============ archivo del jardín ============ */
+/* Guarda el jardín en un archivo de verdad del teléfono. Si el navegador limpia
+   sus datos, el archivo sigue ahí y basta con volver a elegirlo. */
+const SOPORTA_ARCHIVO = (typeof window.showSaveFilePicker === 'function' && typeof window.showOpenFilePicker === 'function');
+let FH=null, FHok=false, FHnom='';
+
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('herbario-fs',1);
+    r.onupgradeneeded=()=>{ try{ r.result.createObjectStore('h'); }catch(e){} };
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function idbPut(k,v){
+  const d=await idbOpen();
+  return new Promise((res,rej)=>{ const t=d.transaction('h','readwrite'); t.objectStore('h').put(v,k);
+    t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); });
+}
+async function idbGet(k){
+  const d=await idbOpen();
+  return new Promise((res,rej)=>{ const t=d.transaction('h','readonly'); const q=t.objectStore('h').get(k);
+    q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); });
+}
+async function idbDel(k){
+  const d=await idbOpen();
+  return new Promise((res,rej)=>{ const t=d.transaction('h','readwrite'); t.objectStore('h').delete(k);
+    t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); });
+}
+
+const TIPOS_ARCHIVO=[{description:'Jardín de Herbario', accept:{'application/json':['.json']}}];
+
+async function archivoGuardar(){
+  if(!FH || !FHok) return;
+  try{
+    const all=await store.all();
+    const txt=JSON.stringify({app:'herbario', v:1, fecha:new Date().toISOString(), zona:huZona, plantas:all});
+    const w=await FH.createWritable();
+    await w.write(txt); await w.close();
+  }catch(e){ FHok=false; pintaArchivo(); }
+}
+async function archivoCargar(){
+  const f=await FH.getFile();
+  const txt=await f.text();
+  if(!txt.trim()) return 0;
+  const data=JSON.parse(txt);
+  const list=(data&&data.plantas)||[];
+  for(const k of await db.keys('planta:')) await db.del(k);
+  let n=0;
+  for(const p of list){ if(p&&p.id){ await db.set('planta:'+p.id, JSON.stringify(p)); n++; } }
+  if(data&&data.zona){ huZona=data.zona; await db.set('config:zona',huZona); }
+  return n;
+}
+async function archivoCrear(){
+  try{
+    FH=await window.showSaveFilePicker({suggestedName:'herbario.json', types:TIPOS_ARCHIVO});
+    FHok=true; FHnom=FH.name||'herbario.json';
+    await idbPut('handle',FH);
+    await archivoGuardar();
+    pintaArchivo('Hecho. A partir de ahora cada cambio se escribe en '+FHnom+'.');
+  }catch(e){ if(e && e.name!=='AbortError') pintaArchivo('No se pudo crear el archivo.'); }
+}
+async function archivoAbrir(){
+  try{
+    const sel=await window.showOpenFilePicker({types:TIPOS_ARCHIVO, multiple:false});
+    FH=sel[0];
+    const perm=await FH.requestPermission({mode:'readwrite'});
+    FHok=(perm==='granted'); FHnom=FH.name||'herbario.json';
+    await idbPut('handle',FH);
+    const n=await archivoCargar();
+    pintaArchivo(n+' planta(s) recuperadas de '+FHnom+'.');
+    jardin=await store.all();
+  }catch(e){ if(e && e.name!=='AbortError') pintaArchivo('No se pudo abrir ese archivo.'); }
+}
+async function archivoReconectar(){
+  if(!FH) return;
+  try{
+    const perm=await FH.requestPermission({mode:'readwrite'});
+    FHok=(perm==='granted');
+    if(FHok){ const n=await archivoCargar(); jardin=await store.all(); pintaArchivo(n+' planta(s) leídas del archivo.'); avisoArchivo(); renderGarden(); }
+    else pintaArchivo('El permiso sigue sin darse.');
+  }catch(e){ pintaArchivo('No se pudo reconectar con el archivo.'); }
+}
+async function archivoOlvidar(){
+  FH=null; FHok=false; FHnom='';
+  try{ await idbDel('handle'); }catch(e){}
+  pintaArchivo('Olvidado. El jardín vuelve a guardarse solo en el móvil.');
+  avisoArchivo();
+}
+async function archivoBoot(){
+  if(!SOPORTA_ARCHIVO) return;
+  try{ FH=await idbGet('handle'); }catch(e){ FH=null; }
+  if(!FH) return;
+  FHnom=FH.name||'herbario.json';
+  try{
+    const perm=await FH.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){ FHok=true; await archivoCargar(); }
+    else FHok=false;
+  }catch(e){ FHok=false; }
+  avisoArchivo();
+}
+function avisoArchivo(){
+  const c=$('gardenFile'); if(!c) return;
+  if(FH && !FHok){
+    c.innerHTML='<div class="card pad" style="margin-bottom:14px;background:var(--green-soft);border-color:#BDD3B4">'+
+      '<b>Tu jardín está en '+esc(FHnom)+'</b><br>El navegador pide permiso otra vez para abrirlo.'+
+      '<div class="row"><button class="btn" id="gfOk">Abrir mi archivo</button></div></div>';
+    $('gfOk').onclick=archivoReconectar;
+  }else c.innerHTML='';
+}
+function pintaArchivo(msg){
+  if(!$('fileState')) return;
+  $('fileState').textContent = !SOPORTA_ARCHIVO
+    ? 'Este navegador no sabe escribir en archivos. Usa la copia de seguridad de abajo.'
+    : (FH && FHok ? 'Guardando en '+FHnom+' cada vez que cambias algo.'
+      : (FH ? 'Hay un archivo elegido ('+FHnom+') pero falta el permiso. Toca "Abrir archivo existente".'
+            : 'Sin archivo: el jardín se guarda solo en la memoria del móvil.'));
+  $('fileBtns').innerHTML = SOPORTA_ARCHIVO
+    ? '<div class="row"><button class="btn" id="fileNew">Crear archivo del jardín</button>'+
+      '<button class="btn ghost" id="fileOpen">Abrir archivo existente</button>'+
+      (FH?'<button class="btn quiet" id="fileForget">Dejar de usarlo</button>':'')+'</div>'
+    : '';
+  if($('fileNew')) $('fileNew').onclick=archivoCrear;
+  if($('fileOpen')) $('fileOpen').onclick=archivoAbrir;
+  if($('fileForget')) $('fileForget').onclick=archivoOlvidar;
+  if(msg) $('fileMsg').innerHTML=okBox(msg);
+}
 
 /* ============ huerta: calendario de siembra ============ */
 /* meses de 1 a 12. sem: semillero · dir: siembra directa · tra: trasplante · cos: cosecha
@@ -1655,11 +1795,14 @@ function pintaDiagnostico(i){
 
 /* ============ ajustes ============ */
 function renderSettings(){
+  pintaArchivo();
   $('apiKey').value='';
   $('apiKey').placeholder = CFG.apiKey ? 'Escribe otra clave para cambiarla' : '2b10...';
-  $('keyState').textContent = CFG.apiKey
-    ? 'Hay una clave guardada, terminada en '+CFG.apiKey.slice(-4)+'. Pruébala para ver cuántas identificaciones te quedan hoy.'
-    : 'No hay ninguna clave guardada. Sin ella funciona todo menos identificar por foto.';
+  $('keyState').textContent = CFG.apiKey===PNKEY_FIJA
+    ? 'La app trae tu clave puesta de fábrica, así que no hace falta escribir nada. Solo usa esta casilla si algún día la cambias en Pl@ntNet.'
+    : (CFG.apiKey
+       ? 'Estás usando una clave puesta a mano, terminada en '+CFG.apiKey.slice(-4)+'. Con "Borrar clave" vuelves a la de fábrica.'
+       : 'No hay ninguna clave. Sin ella funciona todo menos identificar por foto.');
   $('storeInfo').textContent = 'Guardado en: '+
     (BACKEND==='claude'?'almacenamiento de Claude':(BACKEND==='local'?'memoria del teléfono':'solo esta sesión, no se conserva al cerrar'))+'.';
 }
@@ -1704,10 +1847,10 @@ $('keySave').onclick=async()=>{
   $('keyMsg').innerHTML=okBox('Clave guardada en este teléfono.');
 };
 $('keyClear').onclick=async()=>{
-  CFG.apiKey=''; await db.del('config:pnkey'); $('apiKey').value='';
+  await db.del('config:pnkey'); CFG.apiKey=PNKEY_FIJA; $('apiKey').value='';
   $('keyShow').dataset.on=''; $('keyShow').textContent='Ver la guardada';
   renderSettings();
-  $('keyMsg').innerHTML=okBox('Clave borrada.');
+  $('keyMsg').innerHTML=okBox('Vuelves a la clave de fábrica.');
 };
 
 $('bkExport').onclick=async()=>{
@@ -1743,6 +1886,7 @@ $('bkFile').onchange=async e=>{
 (async function init(){
   await cfgLoad();
   await zonaLoad();
+  await archivoBoot();
   renderChips();
   renderSettings();
 })();
