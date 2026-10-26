@@ -177,8 +177,12 @@
 
   <!-- DIAGNÓSTICO -->
   <section id="view-huerta" class="hide">
-    <h2>Calendario de huerta</h2>
-    <p class="lead">Qué sembrar, qué trasplantar y qué recoger cada mes. Son fechas orientativas: manda siempre el tiempo que haga.</p>
+    <h2>Calendario</h2>
+    <p class="lead" id="huLead"></p>
+    <div class="chips" id="huModo">
+      <button class="chip" data-mo="siembras" aria-pressed="true">Huerta</button>
+      <button class="chip" data-mo="podas" aria-pressed="false">Podas</button>
+    </div>
     <div class="chips" id="huZona"></div>
     <div class="chips" id="huMes"></div>
     <div id="huOut"></div>
@@ -289,7 +293,7 @@
   </button>
   <button data-view="huerta">
     <svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 20v-5"/><path d="M12 20V9"/><path d="M18 20v-8"/><path d="M6 15c-1.7 0-3-1.3-3-3 1.7 0 3 1.3 3 3Z"/><path d="M12 9c-2 0-3.5-1.5-3.5-3.5C10.5 5.5 12 7 12 9Z"/><path d="M12 9c2 0 3.5-1.5 3.5-3.5C13.5 5.5 12 7 12 9Z"/><path d="M18 12c-1.7 0-3-1.3-3-3 1.7 0 3 1.3 3 3Z"/></svg>
-    Huerta
+    Calendario
   </button>
   <button data-view="diag">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M11 8v4"/><path d="M11 14.5v.5"/></svg>
@@ -1390,6 +1394,257 @@ function pintaArchivo(msg){
   if(msg) $('fileMsg').innerHTML=okBox(msg);
 }
 
+/* ============ calendario de podas ============ */
+const PODAS = [
+ {n:'Manzano', g:'Frutales de pepita', m:[12,1,2], ep:'En pleno reposo, con la hoja caída y sin heladas fuertes',
+  como:['Quita primero lo seco, lo roto y lo que se cruza hacia dentro.','Abre el centro para que entre la luz: forma de copa o de vaso.','Corta los chupones verticales que salen del tronco y de las ramas gruesas.','Deja las ramitas cortas con yemas gordas: ahí es donde vienen las manzanas.'],
+  no:['No la cortes a ras del tronco: deja el anillo que se ve en la base de la rama.','No podes con heladas ni con la madera mojada.'],
+  tip:'En un árbol viejo y abandonado, reparte la poda en tres inviernos. De golpe se llena de chupones.'},
+ {n:'Peral', g:'Frutales de pepita', m:[12,1,2], ep:'En pleno invierno, como el manzano',
+  como:['Aclara el centro y baja las ramas muy verticales.','Respeta las lamburdas, esas ramitas cortas con yema gorda.','Rebaja la altura si no llegas a recoger.'],
+  no:['No acortes todas las ramas por la punta: eso solo da madera.'],
+  tip:'Atar una rama vertical hacia abajo da más fruta que cortarla.'},
+ {n:'Membrillo', g:'Frutales de pepita', m:[2,3], ep:'A finales de invierno',
+  como:['Aclara ramas viejas y deja la planta aireada.','Quita los brotes que salen del pie.'],
+  no:['No lo podes fuerte: fructifica en los brotes del año.'],
+  tip:'Agradece más una limpieza ligera cada año que una poda gorda cada cinco.'},
+ {n:'Níspero japonés', g:'Frutales de pepita', m:[6,7], ep:'Justo después de recoger la fruta',
+  como:['Aclara las ramas del interior y quita lo seco.','Rebaja la altura si se ha ido arriba.'],
+  no:['No lo podes en otoño: cortarías la floración, que es de noviembre.'],
+  tip:'Florece en otoño, así que todo lo que cortes a partir de septiembre es fruta que pierdes.'},
+
+ {n:'Cerezo', g:'Frutales de hueso', m:[7,8], ep:'Después de la cosecha, en pleno verano',
+  como:['Quita las ramas secas y las que crecen hacia dentro.','Baja la altura para poder recogerlo sin escalera.','Haz cortes limpios y pocos.'],
+  no:['No lo podes en invierno: suelta goma por las heridas y se debilita.'],
+  tip:'El cerezo es de los que menos poda quieren. Cuanto menos lo toques, mejor.'},
+ {n:'Ciruelo', g:'Frutales de hueso', m:[8,9], ep:'Tras la cosecha, con calor todavía',
+  como:['Aclara el centro y quita ramas muy juntas.','Retira los chupones del pie.'],
+  no:['Evita la poda de invierno húmedo: entra el hongo por las heridas.'],
+  tip:'Si va muy cargado, aclara frutos en junio: los que queden serán el doble de buenos.'},
+ {n:'Melocotonero y nectarina', g:'Frutales de hueso', m:[2,3], ep:'Al final del invierno, antes de que abra la flor',
+  como:['Es el que más poda necesita: renueva cada año la madera que ya dio fruta.','Deja ramos mixtos del año anterior, que son los que llevan flor y hoja.','Abre bien el centro.'],
+  no:['No dejes madera vieja sin brotes: no volverá a dar.'],
+  tip:'Lo que da fruta este año es el brote del año pasado. Si no renuevas, la cosecha se va subiendo a lo alto.'},
+ {n:'Albaricoquero', g:'Frutales de hueso', m:[7,8], ep:'Después de recoger',
+  como:['Aclara y quita lo seco.','Renueva algo de madera vieja cada año.'],
+  no:['Nada de podas gordas en invierno.'],
+  tip:'Es muy sensible a los hongos de la madera: poda en día seco y sella los cortes grandes.'},
+ {n:'Almendro', g:'Frutales de hueso', m:[2,3], ep:'Al final del invierno',
+  como:['Limpieza suave: seco, roto y cruzado.','Mantén el vaso abierto.'],
+  no:['No lo podes fuerte todos los años.'],
+  tip:'Florece el primero de todos; si puedes, poda antes de que abra la flor.'},
+
+ {n:'Higuera', g:'Otros frutales', m:[2,3], ep:'Al final del invierno, pasadas las heladas fuertes',
+  como:['Quita ramas secas y las que van al suelo.','Rebaja altura para alcanzar los higos.'],
+  no:['No la podes en pleno frío: las heridas no cierran y se hiela la madera.'],
+  tip:'El látex blanco irrita la piel. Guantes y manga larga.'},
+ {n:'Olivo', g:'Otros frutales', m:[3,4], ep:'Pasadas las heladas y antes de que florezca',
+  como:['Quita los chupones del pie y las ramas que van hacia dentro.','Deja que entre la luz hasta el centro del árbol.','Mantén tres o cuatro brazos principales.'],
+  no:['No lo podes en años alternos a lo bestia.'],
+  tip:'Se dice que un pájaro debe poder volar entre sus ramas sin tocarlas.'},
+ {n:'Naranjo y limonero', g:'Otros frutales', m:[3,4], ep:'En primavera, cuando ya no hiela',
+  como:['Quita chupones, ramas secas y las que rozan el suelo.','Aclara el interior lo justo: la hoja les protege la corteza del sol.'],
+  no:['No podes en otoño ni en invierno: el frío entra por los cortes.'],
+  tip:'Los chupones verticales se arrancan en verde en cuanto salen, en cualquier época.'},
+ {n:'Nogal', g:'Otros frutales', m:[8,9], ep:'A final de verano, tras la caída de la hoja no',
+  como:['Poda lo mínimo: ramas secas o peligrosas.','Cortes pequeños y limpios.'],
+  no:['Nunca en primavera: suelta savia a chorros y no para.'],
+  tip:'Los nogales casi no se podan. Si hay que hacerlo, agosto o septiembre.'},
+ {n:'Castaño', g:'Otros frutales', m:[11,12,1,2], ep:'En reposo invernal',
+  como:['Limpia ramas secas y aclara el centro.'],
+  no:['Nada de cortes grandes: cicatriza mal y entra el chancro.'],
+  tip:'Desinfecta la herramienta entre árbol y árbol: el chancro se pasa así.'},
+ {n:'Avellano', g:'Otros frutales', m:[2,3], ep:'Al final del invierno',
+  como:['Corta a ras las varas de más de cinco años para que entren las nuevas.','Quita los retoños del pie, dejando unas pocas varas jóvenes.'],
+  no:['No lo recortes por la punta como un seto.'],
+  tip:'Se renueva por varas, como los frutos rojos: siempre unas cuantas jóvenes esperando.'},
+ {n:'Granado', g:'Otros frutales', m:[2,3], ep:'Final del invierno',
+  como:['Quita los muchos brotes del pie y deja tres o cuatro troncos.','Aclara el interior.'],
+  no:['No lo despuntes mucho: florece en la punta de los brotes nuevos.'],
+  tip:'Si te quedas sin flor, suele ser por haber cortado demasiadas puntas.'},
+ {n:'Caqui', g:'Otros frutales', m:[2,3], ep:'Final del invierno',
+  como:['Aclara ramas que se cruzan y baja la altura.','Renueva algo de madera cada año.'],
+  no:['No dejes que cargue de más: las ramas se parten.'],
+  tip:'Si un año viene cargadísimo, aclara frutos en julio o al siguiente no dará nada.'},
+ {n:'Kiwi', g:'Otros frutales', m:[12,1], ep:'En pleno invierno, y otra ligera en junio',
+  como:['Corta las ramas que ya dieron fruta y deja las del año.','Deja de seis a ocho yemas en cada rama que guardes.','En junio, despunta lo que se desmadre.'],
+  no:['No lo podes en febrero o marzo: llora savia sin parar.'],
+  tip:'Necesita emparrado fuerte: un kiwi adulto pesa una barbaridad.'},
+ {n:'Palmera', g:'Otros frutales', m:[11,12,1,2], ep:'En los meses fríos',
+  como:['Corta solo las hojas secas del todo, dejando un trozo de peciolo.'],
+  no:['No la podes de marzo a octubre.'],
+  tip:'El picudo rojo huele los cortes frescos y acude. Por eso se poda en invierno.'},
+
+ {n:'Vid y parra', g:'Vid y frutos rojos', m:[1,2], ep:'En reposo, antes de que empiece a llorar',
+  como:['Deja los pulgares con dos yemas sobre la madera del año anterior.','Quita todo lo que dio uva el año pasado.','Dirige los brazos por el emparrado.'],
+  no:['No podes tarde, con la yema ya hinchada: pierde savia sin parar.'],
+  tip:'En mayo y junio, poda en verde: despunta y quita hojas que tapan los racimos.'},
+ {n:'Frambueso', g:'Vid y frutos rojos', m:[2,9], ep:'Depende del tipo: los de dos cosechas, en febrero; los de una, tras recoger',
+  como:['Remontantes (dan en otoño): corta todas las cañas a ras del suelo en febrero.','No remontantes: corta solo las cañas que ya dieron fruta, en cuanto acaben.','Deja de seis a ocho cañas jóvenes por mata.'],
+  no:['No dejes la mata cerrada: se llena de hongos.'],
+  tip:'Las cañas que ya han dado fruta se reconocen porque están secas y leñosas. Esas fuera.'},
+ {n:'Grosellero y casis', g:'Vid y frutos rojos', m:[12,1,2], ep:'En invierno',
+  como:['Corta a ras las ramas de más de tres años, las más oscuras.','Deja de ocho a diez ramas jóvenes.'],
+  no:['No lo recortes por arriba sin aclarar por dentro.'],
+  tip:'Un tercio de la mata, renovado cada invierno. Así nunca envejece.'},
+ {n:'Arándano', g:'Vid y frutos rojos', m:[2,3], ep:'Final del invierno',
+  como:['Quita ramas viejas, finas y las que tocan el suelo.','Deja los brotes gruesos del año, que son los que darán.'],
+  no:['No lo podes los tres primeros años, solo limpieza.'],
+  tip:'Necesita tierra ácida; si amarillea, el problema no es la poda sino el agua de riego.'},
+ {n:'Zarzamora', g:'Vid y frutos rojos', m:[9,10], ep:'Después de la cosecha',
+  como:['Corta a ras las cañas que fructificaron.','Ata las nuevas al alambre para el año que viene.'],
+  no:['No la dejes a su aire o se te come el huerto.'],
+  tip:'Guantes gordos y manga larga: no hay otra.'},
+
+ {n:'Rosal de pie o arbusto', g:'Rosales', m:[2,3], ep:'Al final del invierno, antes de que brote',
+  como:['Deja de tres a cinco ramas fuertes y córtalas a tres o cuatro yemas.','Corta siempre un poco por encima de una yema que mire hacia fuera.','Quita lo seco, lo fino y lo que cruza el centro.','Corta en bisel, para que escurra el agua.'],
+  no:['No lo podes en otoño: los brotes nuevos se te hielan.'],
+  tip:'Tira a cortar más que menos: el rosal perdona la poda fuerte y lo agradece.'},
+ {n:'Rosal trepador', g:'Rosales', m:[7,2], ep:'Tras la floración los de una sola flor; en febrero los que repiten',
+  como:['Mantén las ramas principales y guíalas lo más horizontales que puedas.','Corta los brotes laterales a dos o tres yemas.','Renueva cada año alguna rama vieja desde la base.'],
+  no:['No lo cortes todo a la misma altura como un seto.'],
+  tip:'Rama tumbada, rama florida. Las verticales solo hacen madera.'},
+
+ {n:'Hortensia', g:'Arbustos de flor', m:[3], ep:'A principios de primavera',
+  como:['Corta cada tallo seco justo por encima del primer par de yemas gordas.','Quita las ramas finas y las muy viejas desde la base.'],
+  no:['No la podes en otoño ni cortes por debajo de las yemas gordas: ahí está la flor del año.'],
+  tip:'Las flores secas del invierno protegen las yemas del frío. Déjalas puestas hasta marzo.'},
+ {n:'Camelia', g:'Arbustos de flor', m:[4,5], ep:'Justo cuando termina de florecer',
+  como:['Limpieza suave: seco, cruzado y ramas desbocadas.','Da forma sin cortar mucho.'],
+  no:['No la podes en verano ni otoño: ya tiene hechos los botones.'],
+  tip:'Casi no necesita poda. Un repaso ligero cada dos o tres años basta.'},
+ {n:'Lila', g:'Arbustos de flor', m:[6], ep:'En cuanto se pasa la flor',
+  como:['Corta los ramilletes marchitos justo por debajo.','Quita ramas viejas desde la base para renovar.'],
+  no:['No la podes en invierno: te quedas sin flor.'],
+  tip:'Si lleva años sin florecer, corta un tercio de las ramas viejas cada verano durante tres años.'},
+ {n:'Forsitia', g:'Arbustos de flor', m:[4,5], ep:'Nada más caer la flor amarilla',
+  como:['Corta a ras un tercio de las ramas más viejas.','Acorta lo que ha florecido.'],
+  no:['No esperes al invierno.'],
+  tip:'Florece sobre la madera del año anterior: lo que cortes en invierno es flor perdida.'},
+ {n:'Weigela', g:'Arbustos de flor', m:[6,7], ep:'Tras la floración',
+  como:['Corta las ramas que han florecido hasta un brote joven.','Renueva ramas viejas desde abajo.'],
+  no:['No la recortes a bola.'],
+  tip:'Suele dar una segunda floración en septiembre si la podas pronto.'},
+ {n:'Espirea', g:'Arbustos de flor', m:[2,6], ep:'Las de flor de verano, en febrero; las de primavera, tras florecer',
+  como:['Las de verano admiten poda corta, a un palmo del suelo.','Las de primavera, solo aclarado tras la flor.'],
+  no:['No mezcles los dos tipos: mira cuándo florece la tuya.'],
+  tip:'Regla fácil: si florece antes de junio, se poda después de la flor; si florece después, en invierno.'},
+ {n:'Budleya', g:'Arbustos de flor', m:[2,3], ep:'A final de invierno, y fuerte',
+  como:['Córtala a medio metro del suelo sin miedo.','Quita toda la madera fina y seca.'],
+  no:['No la dejes sin podar o se hace enorme y florece arriba del todo.'],
+  tip:'Florece en la madera del año, así que cuanto más la cortes, mejor sale.'},
+ {n:'Hibisco de jardín', g:'Arbustos de flor', m:[2,3], ep:'Final del invierno',
+  como:['Acorta los brotes del año anterior a dos o tres yemas.','Aclara el centro.'],
+  no:['No lo podes con heladas.'],
+  tip:'Brota muy tarde en primavera. Que no cunda el pánico en abril: no está muerto.'},
+ {n:'Adelfa', g:'Arbustos de flor', m:[10,11], ep:'Cuando acaba la floración, en otoño',
+  como:['Quita las ramas viejas desde la base y aclara.','Rebaja altura si hace falta.'],
+  no:['No quemes los restos: el humo también es tóxico.'],
+  tip:'Toda la planta es venenosa. Guantes, y lávate las manos al terminar.'},
+ {n:'Jazmín', g:'Arbustos de flor', m:[9], ep:'Cuando termina de florecer',
+  como:['Aclara los tallos enredados y quita lo seco.','Guía los nuevos por el soporte.'],
+  no:['No lo cortes a ras cada año.'],
+  tip:'Si está enmarañado, mejor desenredar y atar que cortar.'},
+ {n:'Glicinia', g:'Arbustos de flor', m:[8,1], ep:'Dos veces: en agosto en verde y en enero más corta',
+  como:['En agosto, corta los latigazos largos dejando cinco o seis hojas.','En enero, acorta esos mismos a dos o tres yemas.'],
+  no:['No la dejes suelta: levanta canalones y tejas.'],
+  tip:'Esas dos podas son justo lo que la hace florecer en racimos. Sin ellas, solo da hoja.'},
+ {n:'Madreselva', g:'Arbustos de flor', m:[8,9], ep:'Después de la floración',
+  como:['Aclara lo viejo y enredado.','Acorta a la mitad los brotes muy largos.'],
+  no:['No la podes en primavera.'],
+  tip:'Cada pocos años admite una poda severa para renovarla entera.'},
+
+ {n:'Lavanda', g:'Aromáticas leñosas', m:[8,9], ep:'Nada más pasar la flor',
+  como:['Recórtala en forma de bola, quitando un tercio.','Corta siempre sobre madera con hojas verdes.'],
+  no:['Nunca cortes la madera gris y pelada de abajo: de ahí no rebrota.'],
+  tip:'Recortada cada año aguanta diez; sin podar se abre por el centro y se muere en cuatro.'},
+ {n:'Romero', g:'Aromáticas leñosas', m:[5,6], ep:'Tras la floración de primavera',
+  como:['Despunta las ramas, un tercio como mucho.','Dale forma redondeada.'],
+  no:['No cortes la madera vieja sin hoja.'],
+  tip:'Cogerle ramitas para cocinar durante todo el año ya es media poda.'},
+ {n:'Salvia y santolina', g:'Aromáticas leñosas', m:[3], ep:'A principios de primavera',
+  como:['Recorta un tercio de la mata para que no se abra.'],
+  no:['No la toques en pleno invierno.'],
+  tip:'Si ya se ha abierto por el centro, acoda una rama con tierra y sale planta nueva.'},
+
+ {n:'Boj', g:'Setos y hoja perenne', m:[5,6,9], ep:'Dos repasos: primavera y final de verano',
+  como:['Recorta poco y a menudo, mejor que mucho de golpe.','Hazlo en día nublado o a última hora.'],
+  no:['No lo podes a pleno sol: las hojas cortadas se queman.'],
+  tip:'Si ves las hojas con manchas y los brotes secos, mira la oruga del boj antes de seguir podando.'},
+ {n:'Seto de laurel, aligustre o fotinia', g:'Setos y hoja perenne', m:[5,6,9], ep:'Final de primavera y septiembre',
+  como:['Recorta más estrecho arriba que abajo, para que le dé el sol hasta el pie.','Pasa el cordel si quieres la línea recta.'],
+  no:['No lo recortes en pleno verano seco ni con heladas.'],
+  tip:'Antes de cortar, mira que no haya nidos: de abril a junio es temporada.'},
+ {n:'Escalonia y abelia', g:'Setos y hoja perenne', m:[7,8], ep:'Tras la floración',
+  como:['Recorta para dar forma y quita ramas viejas desde la base.'],
+  no:['No las podes en invierno en zona fría.'],
+  tip:'Aguantan bien el viento del norte, por eso son el seto típico de la costa.'},
+ {n:'Hiedra', g:'Setos y hoja perenne', m:[5,6], ep:'En primavera, cuando arranca a crecer',
+  como:['Recorta los bordes y lo que invade ventanas o canalones.'],
+  no:['No la dejes subir por paredes con grietas.'],
+  tip:'Se puede cortar casi en cualquier época: es imposible matarla podando.'},
+
+ {n:'Arce y abedul', g:'Árboles ornamentales', m:[8,9], ep:'A final de verano',
+  como:['Solo ramas secas, rotas o peligrosas.','Cortes limpios junto al anillo de la rama.'],
+  no:['Nunca en primavera: lloran savia durante semanas.'],
+  tip:'Son árboles que se podan poco. En duda, no cortes.'},
+ {n:'Magnolio', g:'Árboles ornamentales', m:[6,7], ep:'Después de florecer',
+  como:['Solo lo seco y alguna rama mal dirigida.'],
+  no:['No lo podes fuerte: cicatriza mal.'],
+  tip:'Es de los árboles que mejor quedan sin que nadie los toque.'},
+ {n:'Frutal joven recién plantado', g:'Árboles ornamentales', m:[2,3], ep:'Los tres primeros inviernos',
+  como:['Elige tres o cuatro ramas bien repartidas y quita el resto.','Despunta esas ramas para que se ramifiquen.','Mantén el tronco limpio hasta la altura que quieras.'],
+  no:['No lo dejes cargar fruta los dos primeros años.'],
+  tip:'La forma que le des de joven es la que tendrá cuarenta años. Es la poda que más se nota.'}
+];
+
+let huModo='siembras', podSel=null;
+
+function renderPodas(){
+  if(podSel){ pintaPoda(); return; }
+  if(huMes===0){
+    const grupos=[...new Set(PODAS.map(p=>p.g))];
+    $('huOut').innerHTML=grupos.map(g=>
+      '<div class="sec-title">'+esc(g)+'</div>'+
+      PODAS.filter(p=>p.g===g).map(p=>botonPoda(p)).join('')).join('');
+  }else{
+    const list=PODAS.filter(p=>p.m.indexOf(huMes)>=0);
+    $('huOut').innerHTML='<div class="sec-title" style="margin-top:6px">Se poda en '+MES[huMes]+'</div>'+
+      (list.length ? list.map(p=>botonPoda(p)).join('')
+        : '<p class="note">En '+MES[huMes]+' no toca podar casi nada de esta lista. Buen mes para afilar y desinfectar las tijeras.</p>')+
+      '<p class="note">Herramienta afilada y limpia. Entre planta y planta, un paño con alcohol: así no se pasan las enfermedades de la madera.</p>';
+  }
+  $('huOut').querySelectorAll('.plant').forEach(b=>b.onclick=()=>{
+    podSel=PODAS.find(x=>x.n===b.dataset.p)||null; pintaPoda(); window.scrollTo(0,0);
+  });
+}
+function botonPoda(p){
+  return '<button class="plant" data-p="'+esc(p.n)+'"><span>'+
+    '<span class="pn">'+esc(p.n)+'</span><br>'+
+    '<span class="ps">'+esc(p.g)+'</span>'+
+    '<span class="pl">'+esc(p.m.map(m=>MES[m]).join(', '))+'</span>'+
+    '</span></button>';
+}
+function pintaPoda(){
+  const p=podSel;
+  $('huOut').innerHTML=
+    '<div class="row" style="margin-top:6px"><button class="btn quiet" id="poBack">Volver</button></div>'+
+    '<div class="card pad">'+
+      '<h3 style="margin:0">'+esc(p.n)+'</h3>'+
+      '<p class="ps" style="margin:2px 0 0">'+esc(p.g)+'</p>'+
+      '<div class="mcal">'+MINI.slice(1).map((l,i)=>
+        '<div class="'+(p.m.indexOf(i+1)>=0?'b':'')+'">'+l+'</div>').join('')+'</div>'+
+      '<p style="margin:0;font-size:15px">'+esc(p.ep)+'.</p>'+
+      '<div class="sec-title">Cómo</div>'+
+      '<ol style="margin:0;padding-left:20px;font-size:15px">'+p.como.map(x=>'<li style="margin-bottom:6px">'+esc(x)+'</li>').join('')+'</ol>'+
+      '<div class="sec-title">Qué no hacer</div>'+
+      '<ul style="margin:0;padding-left:20px;font-size:15px">'+p.no.map(x=>'<li style="margin-bottom:6px">'+esc(x)+'</li>').join('')+'</ul>'+
+      '<div class="sec-title">Consejo</div>'+
+      '<p style="margin:0;font-size:15px">'+esc(p.tip)+'</p>'+
+    '</div>';
+  $('poBack').onclick=()=>{ podSel=null; renderPodas(); };
+}
+
 /* ============ huerta: calendario de siembra ============ */
 /* meses de 1 a 12. sem: semillero · dir: siembra directa · tra: trasplante · cos: cosecha
    Fechas pensadas para zona templada de costa; la zona fría las corrige sola. */
@@ -1606,6 +1861,14 @@ const cultivoMes = (c,tipo,m) => ajustaMeses(c[tipo],tipo).indexOf(m)>=0;
 async function zonaLoad(){ huZona = (await db.get('config:zona')) || 'templada'; }
 
 function renderHuerta(){
+  $('huLead').textContent = huModo==='siembras'
+    ? 'Qué sembrar, qué trasplantar y qué recoger cada mes. Son fechas orientativas: manda siempre el tiempo que haga.'
+    : 'Cuándo y cómo podar cada árbol y arbusto. Podar a destiempo suele costar la floración o la cosecha del año.';
+  $('huModo').querySelectorAll('.chip').forEach(b=>{
+    b.setAttribute('aria-pressed', b.dataset.mo===huModo);
+    b.onclick=()=>{ huModo=b.dataset.mo; huSel=null; podSel=null; renderHuerta(); };
+  });
+  $('huZona').style.display = huModo==='siembras' ? '' : 'none';
   $('huZona').innerHTML =
     '<button class="chip" data-z="templada" aria-pressed="'+(huZona==='templada')+'">Costa templada</button>'+
     '<button class="chip" data-z="fria" aria-pressed="'+(huZona==='fria')+'">Interior frío</button>';
@@ -1616,6 +1879,7 @@ function renderHuerta(){
     '<button class="chip" data-m="'+(i+1)+'" aria-pressed="'+(huMes===i+1)+'">'+m.charAt(0).toUpperCase()+m.slice(1,3)+'</button>').join('')+
     '<button class="chip" data-m="0" aria-pressed="'+(huMes===0)+'">Todos</button>';
   $('huMes').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{ huMes=parseInt(b.dataset.m); huSel=null; renderHuerta(); });
+  if(huModo==='podas'){ renderPodas(); return; }
   if(huSel) pintaCultivo(); else pintaMes();
 }
 
