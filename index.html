@@ -260,7 +260,7 @@
 
     <div class="sec-title">Copia de seguridad</div>
     <div class="card pad">
-      <p style="margin:0 0 6px;font-size:15px">Se descarga un archivo con todo tu jardín, fotos incluidas. Guárdalo donde quieras y, el día que haga falta, restáuralo eligiéndolo.</p>
+      <p style="margin:0 0 6px;font-size:15px">La app se baja sola una copia al abrirse, una vez al día, con el nombre Herbario y la fecha. Aquí puedes forzar otra cuando quieras, y restaurar desde cualquiera de ellas.</p>
       <div class="row">
         <button class="btn ghost" id="bkExport">Descargar copia</button>
         <button class="btn quiet" id="bkImport">Restaurar desde archivo</button>
@@ -1297,12 +1297,52 @@ async function idbDel(k){
 }
 
 const TIPOS_ARCHIVO=[{description:'Jardín de Herbario', accept:{'application/json':['.json']}}];
+let PERSIST=false;
+
+function hoyTxt(){
+  const d=new Date(), dd=n=>String(n).padStart(2,'0');
+  return ''+d.getFullYear()+dd(d.getMonth()+1)+dd(d.getDate());
+}
+const nombreCopia   = () => 'Herbario '+hoyTxt()+'.json';
+const nombreArchivo = () => 'Herbario Archivo '+hoyTxt()+'.json';
+
+async function datosJSON(){
+  const all=await store.all();
+  return {txt:JSON.stringify({app:'herbario', v:1, fecha:new Date().toISOString(), zona:huZona, plantas:all}), n:all.length};
+}
+function descarga(txt, nombre){
+  const url=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
+  const a=document.createElement('a');
+  a.href=url; a.download=nombre; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+
+/* Pide al navegador que no borre los datos de esta app cuando haga limpieza */
+async function persistir(){
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      PERSIST = await navigator.storage.persisted();
+      if(!PERSIST) PERSIST = await navigator.storage.persist();
+    }
+  }catch(e){ PERSIST=false; }
+}
+
+/* Copia automática al abrir la app, una vez al día */
+async function copiaAuto(){
+  try{
+    const hoy=hoyTxt();
+    if((await db.get('config:ultimaCopia'))===hoy) return;
+    const d=await datosJSON();
+    if(!d.n) return;
+    descarga(d.txt, nombreCopia());
+    await db.set('config:ultimaCopia',hoy);
+  }catch(e){}
+}
 
 async function archivoGuardar(){
   if(!FH || !FHok) return;
   try{
-    const all=await store.all();
-    const txt=JSON.stringify({app:'herbario', v:1, fecha:new Date().toISOString(), zona:huZona, plantas:all});
+    const txt=(await datosJSON()).txt;
     const w=await FH.createWritable();
     await w.write(txt); await w.close();
   }catch(e){ FHok=false; pintaArchivo(); }
@@ -1321,8 +1361,8 @@ async function archivoCargar(){
 }
 async function archivoCrear(){
   try{
-    FH=await window.showSaveFilePicker({suggestedName:'herbario.json', types:TIPOS_ARCHIVO});
-    FHok=true; FHnom=FH.name||'herbario.json';
+    FH=await window.showSaveFilePicker({suggestedName:nombreArchivo(), types:TIPOS_ARCHIVO});
+    FHok=true; FHnom=FH.name||nombreArchivo();
     await idbPut('handle',FH);
     await archivoGuardar();
     pintaArchivo('Hecho. A partir de ahora cada cambio se escribe en '+FHnom+'.');
@@ -1333,7 +1373,7 @@ async function archivoAbrir(){
     const sel=await window.showOpenFilePicker({types:TIPOS_ARCHIVO, multiple:false});
     FH=sel[0];
     const perm=await FH.requestPermission({mode:'readwrite'});
-    FHok=(perm==='granted'); FHnom=FH.name||'herbario.json';
+    FHok=(perm==='granted'); FHnom=FH.name||nombreArchivo();
     await idbPut('handle',FH);
     const n=await archivoCargar();
     pintaArchivo(n+' planta(s) recuperadas de '+FHnom+'.');
@@ -1359,7 +1399,7 @@ async function archivoBoot(){
   if(!SOPORTA_ARCHIVO) return;
   try{ FH=await idbGet('handle'); }catch(e){ FH=null; }
   if(!FH) return;
-  FHnom=FH.name||'herbario.json';
+  FHnom=FH.name||nombreArchivo();
   try{
     const perm=await FH.queryPermission({mode:'readwrite'});
     if(perm==='granted'){ FHok=true; await archivoCargar(); }
@@ -2067,7 +2107,7 @@ function renderSettings(){
     : (CFG.apiKey
        ? 'Estás usando una clave puesta a mano, terminada en '+CFG.apiKey.slice(-4)+'. Con "Borrar clave" vuelves a la de fábrica.'
        : 'No hay ninguna clave. Sin ella funciona todo menos identificar por foto.');
-  $('storeInfo').textContent = 'Guardado en: '+
+  $('storeInfo').textContent = (PERSIST ? 'Almacenamiento protegido: el navegador no debería borrar los datos al hacer limpieza. ' : 'Almacenamiento sin proteger: instala la app en la pantalla de inicio para que el navegador la respete. ')+'Guardado en: '+
     (BACKEND==='claude'?'almacenamiento de Claude':(BACKEND==='local'?'memoria del teléfono':'solo esta sesión, no se conserva al cerrar'))+'.';
 }
 function alterna(inp, btn){
@@ -2118,17 +2158,13 @@ $('keyClear').onclick=async()=>{
 };
 
 $('bkExport').onclick=async()=>{
-  const all=await store.all();
-  if(!all.length){ $('bkMsg').innerHTML=errBox('Todavía no hay plantas que guardar.'); return; }
-  const txt=JSON.stringify({app:'herbario',v:1,fecha:new Date().toISOString(),plantas:all});
-  const d=new Date(), dd=n=>String(n).padStart(2,'0');
-  const nombre='herbario-'+d.getFullYear()+'-'+dd(d.getMonth()+1)+'-'+dd(d.getDate())+'.json';
+  const d=await datosJSON();
+  if(!d.n){ $('bkMsg').innerHTML=errBox('Todavía no hay plantas que guardar.'); return; }
+  const nombre=nombreCopia();
   try{
-    const url=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
-    const a=document.createElement('a');
-    a.href=url; a.download=nombre; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),5000);
-    $('bkMsg').innerHTML=okBox(all.length+' planta(s) guardadas en el archivo '+nombre+'. Búscalo en Descargas.');
+    descarga(d.txt, nombre);
+    await db.set('config:ultimaCopia',hoyTxt());
+    $('bkMsg').innerHTML=okBox(d.n+' planta(s) guardadas en '+nombre+'. Búscalo en Descargas.');
   }catch(e){ $('bkMsg').innerHTML=errBox('El navegador no dejó descargar el archivo.'); }
 };
 $('bkImport').onclick=()=>$('bkFile').click();
@@ -2150,9 +2186,11 @@ $('bkFile').onchange=async e=>{
 (async function init(){
   await cfgLoad();
   await zonaLoad();
+  await persistir();
   await archivoBoot();
   renderChips();
   renderSettings();
+  copiaAuto();
 })();
 </script>
 </body>
